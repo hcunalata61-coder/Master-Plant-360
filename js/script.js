@@ -384,6 +384,71 @@ const LOTS_META = [{"id": "centro comercial", "tipo": "amenidad", "label": "Cent
 const LOTS_BY_ID = {};
 LOTS_META.forEach(l => { if(!(l.id in LOTS_BY_ID)) LOTS_BY_ID[l.id] = l; });
 
+// ---- Conexión con Google Sheets (hoja "Lotes" publicada como CSV) ----
+// Para cambiar la hoja: Google Sheets → Archivo → Compartir → Publicar en la
+// Web → elige la pestaña "Lotes" y el formato CSV, y pega ese enlace aquí.
+const LOTS_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSWgBIwE1H3YJ6v-d0NVbOUa3NrdPOVZPRrRup6-FvOekV33kFkRWnpaIpIJ6MXFUXgLPxORbhjHv7d/pub?gid=125050881&single=true&output=csv';
+
+function parseCsv(text){
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for(let i=0; i<text.length; i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(text[i+1] === '"'){ field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if(c === '"') inQuotes = true;
+      else if(c === ','){ row.push(field); field = ''; }
+      else if(c === '\n' || c === '\r'){
+        if(c === '\r' && text[i+1] === '\n') i++;
+        row.push(field); field = '';
+        rows.push(row); row = [];
+      } else field += c;
+    }
+  }
+  if(field !== '' || row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(v => v !== ''));
+}
+
+async function loadLotsFromSheet(){
+  if(!LOTS_SHEET_CSV_URL) return;
+  try{
+    const res = await fetch(LOTS_SHEET_CSV_URL, { cache:'no-store' });
+    if(!res.ok) return;
+    const text = await res.text();
+    const rows = parseCsv(text);
+    if(rows.length < 2) return;
+    // Encabezados esperados: ID (no editar), Manzana, Lote, Estado, Área (m²), Precio (USD)
+    for(let i=1; i<rows.length; i++){
+      const [id, , , estado, area, precio] = rows[i];
+      if(!id || !(id in LOTS_BY_ID)) continue;
+      const meta = LOTS_BY_ID[id];
+      if(estado) meta.estado = estado.trim();
+      if(area) meta.area = area.trim();
+      if(precio) meta.precio = precio.trim();
+    }
+    applyLotColors();
+  } catch(err){
+    console.warn('No se pudo cargar la hoja de estados de lotes:', err);
+  }
+}
+
+function applyLotColors(){
+  document.querySelectorAll('.lot-shape[data-id]').forEach(el=>{
+    const meta = LOTS_BY_ID[el.getAttribute('data-id')];
+    el.classList.remove('estado-disponible','estado-reservado','estado-vendido');
+    if(!meta || meta.tipo !== 'lote') return;
+    const estado = (meta.estado || 'Disponible').toLowerCase();
+    if(estado === 'reservado') el.classList.add('estado-reservado');
+    else if(estado === 'vendido') el.classList.add('estado-vendido');
+    else el.classList.add('estado-disponible');
+  });
+}
+loadLotsFromSheet();
+
 // ← reemplaza con tu número real de WhatsApp (código de país sin el "+", sin espacios)
 const WHATSAPP_NUMBER = '593999999999';
 (function setupGlobalCta(){

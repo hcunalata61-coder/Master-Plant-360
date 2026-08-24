@@ -202,6 +202,16 @@
   .lot-shape.special:hover path,.lot-shape.special:hover rect,.lot-shape.special:hover polygon{
     fill:rgba(201,168,106,.5);}
 
+  /* Colores según estado (vienen de la hoja de Google Sheets conectada) */
+  .lot-shape.estado-reservado path,.lot-shape.estado-reservado rect,.lot-shape.estado-reservado polygon{
+    fill:rgba(230,126,34,.4);stroke:rgba(230,126,34,.9);}
+  .lot-shape.estado-reservado:hover path,.lot-shape.estado-reservado:hover rect,.lot-shape.estado-reservado:hover polygon{
+    fill:rgba(230,126,34,.65);}
+  .lot-shape.estado-vendido path,.lot-shape.estado-vendido rect,.lot-shape.estado-vendido polygon{
+    fill:rgba(192,57,43,.45);stroke:rgba(192,57,43,.9);}
+  .lot-shape.estado-vendido:hover path,.lot-shape.estado-vendido:hover rect,.lot-shape.estado-vendido:hover polygon{
+    fill:rgba(192,57,43,.7);}
+
   .lot-num{font-size:9px;font-weight:600;fill:#fff;text-anchor:middle;pointer-events:none;
     font-family:'Work Sans',sans-serif;paint-order:stroke;stroke:rgba(16,20,26,.75);stroke-width:2.2;}
   .lot-mz{font-size:5.5px;fill:#f2ede4;text-anchor:middle;pointer-events:none;
