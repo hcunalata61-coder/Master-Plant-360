@@ -136,8 +136,9 @@ async function loadExplorable(sceneId, data, label){
   updateLocation(label);
 }
 
-// (los botones de dirección se detectan manualmente en endLotPointer, más
-// abajo, por la misma razón que los lotes — ver comentario ahí)
+document.querySelectorAll('.cardinal-btn-svg').forEach(btn=>{
+  btn.addEventListener('click', ()=> goDirection(btn.dataset.dir));
+});
 
 // Anclas 3D (yaw/pitch) para el botón "Centro" dentro de cada vista cardinal.
 // Por defecto apunta al centro/frente de la foto; para "Atrás" (norte) se
@@ -215,36 +216,6 @@ function goToCentroSphere(){
   else proceed();
 }
 
-// Lleva directo a una de las 4 vistas cardinales desde CUALQUIER pantalla
-// (esfera principal, mapa de lotes, Centro, u otra vista cardinal) — usada
-// por los botones del panel lateral "Vista Atrás/Frontal/Derecha/Izquierda".
-function goToDirectSphere(dir){
-  const cfg = CARDINAL_SCENES[dir];
-  if(!cfg.image){ showToast('Próximamente: vista hacia el ' + cfg.label); return; }
-  if(panoView.classList.contains('active')) hidePanoView();
-  const flat = document.getElementById('flatScene');
-  const wrap = document.getElementById('planetWrap');
-  const sphereActive = sphereView.classList.contains('active');
-  const fromAerial = currentView === 'aerial';
-  const fromPrincipal = !sphereActive && !fromAerial;
-  let outgoing = null, outgoingClass = null;
-  if(sphereActive){ outgoing = sphereView; outgoingClass = 'zoom-out-full'; }
-  else if(fromAerial){ outgoing = flat; outgoingClass = 'zoom-out-full'; }
-  else if(fromPrincipal){ outgoing = wrap; outgoingClass = 'zoom-out-centered'; }
-  const proceed = async ()=>{
-    if(outgoing) outgoing.classList.remove(outgoingClass);
-    if(fromAerial) setFlatVisible(false);
-    await enterSphereScene(cfg.image, dir, 'Vista ' + cfg.label);
-    sphereView.classList.add('active', 'zoom-in-full');
-    setTimeout(()=> sphereView.classList.remove('zoom-in-full'), 480);
-    sphereHint.classList.remove('faded');
-    showBackBtn(true);
-    setActiveNav('dir-' + dir);
-  };
-  if(outgoing){ outgoing.classList.add(outgoingClass); setTimeout(proceed, 260); }
-  else proceed();
-}
-
 function goDirectionFromCentro(dir){
   const cfg = CARDINAL_SCENES[dir];
   if(!cfg.image){ showToast('Próximamente: vista hacia el ' + cfg.label); return; }
@@ -275,7 +246,6 @@ function goToAerial(){
     setActiveNav('aerial');
     flat.classList.add('zoom-in-full');
     setTimeout(()=> flat.classList.remove('zoom-in-full'), 480);
-    sizeLotsSvg();
     resetLotZoom();
     pulseGlobalCta();
   }, 260);
@@ -299,43 +269,12 @@ let lotPinchDist = null;
 function applyLotTransform(){
   lotsSvg.style.transform = `translate(${lotX}px, ${lotY}px) scale(${lotZoom})`;
 }
-// En celular, el SVG se dimensiona más grande que la pantalla (a la
-// relación de aspecto real de la foto), y #flatScene (overflow:hidden)
-// recorta la ventana visible — así arrastrar revela imagen real, no un
-// borde vacío. En escritorio se deja del tamaño del contenedor, igual que
-// siempre.
-let lotIsMobile = false, lotSvgNativeW = 0, lotSvgNativeH = 0;
-function sizeLotsSvg(){
-  const containerW = flatSceneEl.clientWidth, containerH = flatSceneEl.clientHeight;
-  lotIsMobile = window.innerWidth <= 720;
-  if(lotIsMobile){
-    const containerAspect = containerW / containerH;
-    const viewBoxAspect = 1920 / 1080.57;
-    let svgW, svgH;
-    if(containerAspect < viewBoxAspect){ svgH = containerH; svgW = svgH * viewBoxAspect; }
-    else { svgW = containerW; svgH = svgW / viewBoxAspect; }
-    lotsSvg.style.width = svgW + 'px';
-    lotsSvg.style.height = svgH + 'px';
-    lotsSvg.style.left = ((containerW - svgW) / 2) + 'px';
-    lotsSvg.style.top = ((containerH - svgH) / 2) + 'px';
-    lotSvgNativeW = svgW; lotSvgNativeH = svgH;
-  } else {
-    lotsSvg.style.width = ''; lotsSvg.style.height = '';
-    lotsSvg.style.left = ''; lotsSvg.style.top = '';
-    lotSvgNativeW = containerW; lotSvgNativeH = containerH;
-  }
-}
-sizeLotsSvg();
-window.addEventListener('resize', sizeLotsSvg);
-
 function clampLotPan(){
   const rect = flatSceneEl.getBoundingClientRect();
-  const baseX = lotIsMobile ? Math.max(0, (lotSvgNativeW - rect.width) / 2) : 0;
-  const baseY = lotIsMobile ? Math.max(0, (lotSvgNativeH - rect.height) / 2) : 0;
-  const zoomX = Math.max(0, (lotZoom-1) * rect.width);
-  const zoomY = Math.max(0, (lotZoom-1) * rect.height);
-  lotX = Math.max(-(zoomX+baseX), Math.min(baseX, lotX));
-  lotY = Math.max(-(zoomY+baseY), Math.min(baseY, lotY));
+  const maxX = Math.max(0, (lotZoom-1) * rect.width);
+  const maxY = Math.max(0, (lotZoom-1) * rect.height);
+  lotX = Math.max(-maxX, Math.min(0, lotX));
+  lotY = Math.max(-maxY, Math.min(0, lotY));
 }
 function lotZoomBy(factor, anchorX, anchorY){
   const prevZoom = lotZoom;
@@ -357,11 +296,10 @@ flatSceneEl.addEventListener('wheel', (e)=>{
 }, { passive:false });
 
 flatSceneEl.addEventListener('pointerdown', (e)=>{
-  if(!flatSceneEl.classList.contains('active')) return;
-  lotMoved = false;
-  if(e.target.closest('.cardinal-btn-svg')) return;
+  if(!flatSceneEl.classList.contains('active') || e.target.closest('.cardinal-btn-svg')) return;
   lotPointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
   flatSceneEl.setPointerCapture(e.pointerId);
+  lotMoved = false;
   if(lotPointers.size === 1){
     lotDragging = true; lotLastX = e.clientX; lotLastY = e.clientY;
     flatSceneEl.classList.add('panning');
@@ -400,14 +338,8 @@ function endLotPointer(e){
       lotSuppressClick = true; setTimeout(()=> lotSuppressClick=false, 0);
     } else {
       // Toque simple (sin arrastre): la captura de puntero impide que el "click"
-      // llegue al elemento real (lote o botón de dirección), así que lo
-      // detectamos manualmente aquí.
+      // llegue al lote real, así que lo detectamos manualmente aquí.
       const el = document.elementFromPoint(e.clientX, e.clientY);
-      const btn = el && el.closest && el.closest('.cardinal-btn-svg');
-      if(btn){
-        goDirection(btn.dataset.dir);
-        return;
-      }
       const shape = el && el.closest && el.closest('.lot-shape');
       if(shape){
         const id = shape.getAttribute('data-id');
@@ -424,7 +356,6 @@ flatSceneEl.addEventListener('pointerup', endLotPointer);
 flatSceneEl.addEventListener('pointercancel', endLotPointer);
 flatSceneEl.addEventListener('click', (e)=>{ if(lotSuppressClick) e.stopPropagation(); }, true);
 flatSceneEl.addEventListener('dblclick', ()=> resetLotZoom());
-
 
 function goToPrincipal(){
   if(panoView.classList.contains('active')) hidePanoView();
@@ -1093,9 +1024,7 @@ document.querySelectorAll('.nav-item').forEach(btn=>{
     const t = btn.dataset.target;
     if(t === 'principal') goToPrincipal();
     else if(t === 'centro') goToCentroSphere();
-    else if(t.startsWith('dir-')) goToDirectSphere(t.replace('dir-',''));
     else goToAerial();
-    document.getElementById('sidebar').classList.add('collapsed');
   });
 });
 function setActiveNav(target){
