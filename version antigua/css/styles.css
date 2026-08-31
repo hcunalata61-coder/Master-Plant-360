@@ -185,7 +185,7 @@
   #narrationBar .bar i{position:absolute;left:0;top:0;bottom:0;width:0%;background:var(--gold);}
 
   /* ================= FLAT AERIAL SCENE (mapa/plano real, lotes trazados) ================= */
-  #flatScene{position:fixed;inset:0;z-index:10;display:none;background:var(--bg);}
+  #flatScene{position:fixed;inset:0;z-index:10;display:none;background:var(--bg);overflow:hidden;}
   #flatScene.active{display:block;}
   #lotsOverlay{position:absolute;inset:0;width:100%;height:100%;
     transform-origin:0 0;cursor:grab;touch-action:none;}
@@ -253,6 +253,9 @@
   #flatScene .flat-caption{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);
     font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);
     background:var(--panel-0);padding:6px 14px;border-radius:20px;border:1px solid rgba(201,168,106,.25);}
+  /* Botones de dirección: fijos en pantalla, a los lados del mapa — no
+     forman parte del SVG, así que no se mueven, no giran ni se recortan
+     con el zoom/arrastre del mapa interactivo. */
   .cardinal-btn-svg{cursor:pointer;pointer-events:auto;}
   .cardinal-btn-svg circle{fill:var(--panel-0);stroke:var(--gold);stroke-width:2.4;
     vector-effect:non-scaling-stroke;transition:fill .2s ease,stroke .2s ease;}

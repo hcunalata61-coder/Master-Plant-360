@@ -250,9 +250,9 @@
     font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:none;white-space:nowrap;
     border:1px solid rgba(201,168,106,.3);opacity:0;pointer-events:none;transition:opacity .35s ease;}
   .sphere-cta.show-tip .cta-tooltip{opacity:1;}
-  #flatScene .flat-caption{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);
-    font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);
-    background:var(--panel-0);padding:6px 14px;border-radius:20px;border:1px solid rgba(201,168,106,.25);}
+  /* Botones de dirección: fijos en pantalla, a los lados del mapa — no
+     forman parte del SVG, así que no se mueven, no giran ni se recortan
+     con el zoom/arrastre del mapa interactivo. */
   /* Botones de dirección: fijos en pantalla, a los lados del mapa — no
      forman parte del SVG, así que no se mueven, no giran ni se recortan
      con el zoom/arrastre del mapa interactivo. */
