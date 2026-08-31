@@ -151,8 +151,8 @@ const SPH_CENTER_ANCHOR_OVERRIDES = {
 const SPH_DIR_ANCHORS = {
   norte: { yaw: -Math.PI/2 - 0.35, pitch: 0 }, // Atrás — sobre el horizonte, corrido a la izquierda
   sur:   { yaw: Math.PI/2 - 0.35,  pitch: 0 }, // Frontal — sobre el horizonte, corrido a la izquierda
-  este:  { yaw: 0,                 pitch: 0 }, // Derecha — sobre la línea del horizonte
-  oeste: { yaw: Math.PI,           pitch: 0 }, // Izquierda — sobre la línea del horizonte
+  este:  { yaw: Math.PI,           pitch: 0 }, // Derecha — sobre la línea del horizonte
+  oeste: { yaw: 0,                 pitch: 0 }, // Izquierda — sobre la línea del horizonte
 };
 
 function goDirection(dir){
