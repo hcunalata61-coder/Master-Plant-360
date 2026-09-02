@@ -555,7 +555,12 @@ function openLotInfo(meta){
     wa.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`;
   }
   document.getElementById('lotInfo').classList.add('open');
+  // Evita que el mismo toque que abrió el cuadro lo cierre de inmediato
+  // (por el "click" retrasado/retargeteado que dispara el mapa al soltar).
+  lotInfoJustOpened = true;
+  setTimeout(()=> lotInfoJustOpened = false, 300);
 }
+let lotInfoJustOpened = false;
 document.getElementById('lotInfoClose').addEventListener('click', ()=>
   document.getElementById('lotInfo').classList.remove('open'));
 
@@ -1095,7 +1100,6 @@ document.querySelectorAll('.nav-item').forEach(btn=>{
     else if(t === 'centro') goToCentroSphere();
     else if(t.startsWith('dir-')) goToDirectSphere(t.replace('dir-',''));
     else goToAerial();
-    document.getElementById('sidebar').classList.add('collapsed');
   });
 });
 function setActiveNav(target){
@@ -1118,6 +1122,12 @@ function showToast(msg){
 
 // ---- 5. NARRACIÓN ----
 const narrationAudio = new Audio();
+
+document.getElementById('muteBtn').addEventListener('click', ()=>{
+  narrationAudio.muted = !narrationAudio.muted;
+  document.getElementById('soundOnIcon').style.display = narrationAudio.muted ? 'none' : 'block';
+  document.getElementById('soundOffIcon').style.display = narrationAudio.muted ? 'block' : 'none';
+});
 let userEnabledAudio = false;
 function loadNarration(src){
   narrationAudio.pause(); narrationAudio.currentTime = 0; setPlayIcon(false);
@@ -1148,9 +1158,33 @@ document.getElementById('fullscreenBtn').addEventListener('click', ()=>{
   if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
   else document.exitFullscreen();
 });
+// El panel lateral empieza abierto al cargar la página (sin la clase
+// "collapsed"); esto lo garantiza explícitamente sin importar nada más.
+document.getElementById('sidebar').classList.remove('collapsed');
+
 document.getElementById('sidebarToggle').addEventListener('click', ()=>{
   document.getElementById('sidebar').classList.toggle('collapsed');
 });
+
+// Cierra el panel lateral o el cuadro de información del lote al tocar
+// en cualquier otro lugar de la pantalla (fuera de ellos y de sus propios
+// botones para abrir/cerrar, que ya manejan su propio clic).
+document.addEventListener('click', (e)=>{
+  const sidebar = document.getElementById('sidebar');
+  const onIntroScreen = !document.getElementById('loadScreen').classList.contains('hidden')
+    || !document.getElementById('soundPrompt').classList.contains('hidden');
+  if(!onIntroScreen
+     && !sidebar.classList.contains('collapsed')
+     && !sidebar.contains(e.target)
+     && !document.getElementById('sidebarToggle').contains(e.target)){
+    sidebar.classList.add('collapsed');
+  }
+  const lotInfo = document.getElementById('lotInfo');
+  if(lotInfoJustOpened) return;
+  if(lotInfo.classList.contains('open') && !lotInfo.contains(e.target)){
+    lotInfo.classList.remove('open');
+  }
+}, true);
 
 // ---- 7. CARGA INICIAL ----
 const loadScreen = document.getElementById('loadScreen');
