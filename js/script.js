@@ -162,7 +162,7 @@ function goDirection(dir){
   flat.classList.add('zoom-out-full');
   setTimeout(async ()=>{
     flat.classList.remove('zoom-out-full');
-    setFlatVisible(false);
+    flat.classList.remove('active'); // oculta el mapa sin mostrar la esfera principal de paso
     await enterSphereScene(cfg.image, dir, 'Vista ' + cfg.label);
     sphereView.classList.add('active', 'zoom-in-full');
     setTimeout(()=> sphereView.classList.remove('zoom-in-full'), 480);
@@ -203,7 +203,7 @@ function goToCentroSphere(){
   else if(fromPrincipal){ outgoing = wrap; outgoingClass = 'zoom-out-centered'; }
   const proceed = async ()=>{
     if(outgoing) outgoing.classList.remove(outgoingClass);
-    if(fromAerial) setFlatVisible(false);
+    if(fromAerial) document.getElementById('flatScene').classList.remove('active'); // oculta el mapa sin revelar la esfera principal
     await enterSphereScene(CENTRO_IMAGE, null, 'Centro');
     sphereView.classList.add('active', 'zoom-in-full');
     setTimeout(()=> sphereView.classList.remove('zoom-in-full'), 480);
@@ -233,7 +233,7 @@ function goToDirectSphere(dir){
   else if(fromPrincipal){ outgoing = wrap; outgoingClass = 'zoom-out-centered'; }
   const proceed = async ()=>{
     if(outgoing) outgoing.classList.remove(outgoingClass);
-    if(fromAerial) setFlatVisible(false);
+    if(fromAerial) document.getElementById('flatScene').classList.remove('active'); // oculta el mapa sin revelar la esfera principal
     await enterSphereScene(cfg.image, dir, 'Vista ' + cfg.label);
     sphereView.classList.add('active', 'zoom-in-full');
     setTimeout(()=> sphereView.classList.remove('zoom-in-full'), 480);
