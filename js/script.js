@@ -519,7 +519,7 @@ function applyLotColors(){
 loadLotsFromSheet();
 
 // ← reemplaza con tu número real de WhatsApp (código de país sin el "+", sin espacios)
-const WHATSAPP_NUMBER = '593961025432';
+const WHATSAPP_NUMBER = '593995172209';
 (function setupGlobalCta(){
   const cta = document.getElementById('globalCta');
   const msg = encodeURIComponent('Hola, quiero más información sobre el proyecto.');

@@ -1,0 +1,164 @@
+<!-- ============================================================
+     SECCIÓN ILUSTRACIONES — copiar y pegar
+     Todo el CSS está limitado a .ilus-hero, así que no afecta
+     al resto de tu página. Clases con prefijo "ilus-" para no
+     chocar con las que ya tengas.
+     ============================================================ -->
+
+<style>
+/* Única regla global: quita el margen de 8px que el navegador
+   le pone al body por defecto (el hueco blanco de arriba).
+   No cambia colores, fuentes ni nada más de tu página.
+   Si tu CSS ya tiene body{margin:0}, puedes borrar esta línea. */
+body{margin:0;}
+
+/* Solo dentro de la sección: no toca body ni el resto del sitio */
+.ilus-hero,
+.ilus-hero *{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+.ilus-hero{
+    height:100vh;          /* cámbialo (ej. 600px) si no la quieres a pantalla completa */
+
+    /* Ancho completo: rompe el relleno/margen del contenedor padre */
+    width:100vw;
+    max-width:100vw;
+    margin-left:calc(50% - 50vw);
+    margin-right:calc(50% - 50vw);
+    margin-top:0;          /* si aún queda hueco arriba, prueba con -20px, -40px… */
+    display:block;
+
+    background:#111;
+    color:#fff;
+    font-family:Helvetica, Arial, sans-serif;
+    overflow:hidden;
+}
+
+.ilus-track{
+    display:flex;
+    width:100%;
+    height:100%;
+}
+
+.ilus-card{
+    flex:1;
+    position:relative;
+    background-size:cover;
+    background-position:center;
+    transition:flex .5s ease, filter .5s ease;
+    overflow:hidden;
+    cursor:pointer;
+}
+
+/* ==== IMÁGENES: ajusta las rutas a tu proyecto ==== */
+.ilus-card:nth-child(1){
+    background-image:url("Ilustraciones/3.0p.png");
+    --ilus-overlay:#ff0000;
+}
+.ilus-card:nth-child(2){
+    background-image:url("Ilustraciones/1.0p.png");
+    --ilus-overlay:#004bff;
+}
+.ilus-card:nth-child(3){
+    background-image:url("Ilustraciones/4.0p.png");
+    --ilus-overlay:#f2295b;
+}
+.ilus-card:nth-child(4){
+    background-image:url("Ilustraciones/2.0p.png");
+    --ilus-overlay:#29ddf2;
+}
+
+.ilus-card::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+        linear-gradient(to bottom,
+            rgba(0,0,0,.55),
+            rgba(0,0,0,.25)
+        ),
+        linear-gradient(to bottom,transparent,var(--ilus-overlay));
+    z-index:0;
+}
+
+.ilus-track:hover .ilus-card{
+    flex:.7;
+    filter:grayscale(55%) brightness(.9);
+}
+
+.ilus-track .ilus-card:hover{
+    flex:3.2;
+    filter:none;
+}
+
+.ilus-content{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    text-align:center;
+    color:#fff;
+    opacity:0;
+    transform:scale(.96);
+    transition:.4s;
+    z-index:1;
+}
+
+.ilus-card:hover .ilus-content{
+    opacity:1;
+    transform:scale(1);
+}
+
+.ilus-content h2{
+    font-size:36px;
+    margin-bottom:8px;
+    font-weight:700;
+    line-height:1.2;
+}
+
+.ilus-content p{
+    font-size:14px;
+    letter-spacing:1px;
+    opacity:.85;
+}
+
+@media(max-width:768px){
+    .ilus-track{flex-direction:column;}
+    .ilus-track:hover .ilus-card{flex:1;}
+    .ilus-track .ilus-card:hover{flex:2;}
+}
+</style>
+
+<section class="ilus-hero" id="inicio">
+    <div class="ilus-track">
+        <div class="ilus-card">
+            <div class="ilus-content">
+                <h2>Pixel Art</h2>
+                <p>Arte cuadro por cuadro</p>
+            </div>
+        </div>
+        <div class="ilus-card">
+            <div class="ilus-content">
+                <h2>Cartoon</h2>
+                <p>Líneas con personalidad</p>
+            </div>
+        </div>
+        <div class="ilus-card">
+            <div class="ilus-content">
+                <h2>Cómic</h2>
+                <p>Historias ilustradas</p>
+            </div>
+        </div>
+        <div class="ilus-card">
+            <div class="ilus-content">
+                <h2>Cyberpunk</h2>
+                <p>Futuro distorsionado</p>
+            </div>
+        </div>
+    </div>
+</section>
