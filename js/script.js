@@ -1100,6 +1100,7 @@ document.querySelectorAll('.nav-item').forEach(btn=>{
     else if(t === 'centro') goToCentroSphere();
     else if(t.startsWith('dir-')) goToDirectSphere(t.replace('dir-',''));
     else goToAerial();
+    document.getElementById('sidebar').classList.add('collapsed');
   });
 });
 function setActiveNav(target){
