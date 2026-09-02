@@ -1,0 +1,2246 @@
+<!-- ============================================================================
+     MAPA INTERACTIVO DE LOTES — bloque para pegar dentro de tu página
+     ----------------------------------------------------------------------------
+     Pega TODO este bloque dentro de la sección donde quieres el mapa
+     (en WordPress: bloque "HTML personalizado"; en Elementor: widget "HTML";
+     en una página propia: donde va el contenido).
+
+     Es seguro para tu web:
+     · Todas las clases y variables llevan el prefijo .nx- y no tocan nada más.
+     · No incluye <html>, <head>, <body> ni reset global.
+     · El JavaScript va encerrado y no crea variables globales.
+     · La ventana de info y el globito se mueven solos al <body> para que
+       ningún contenedor de tu plantilla los recorte.
+
+     Recuerda cambiar CONFIG.whatsapp por tu número real.
+     ============================================================================ -->
+
+<style>
+/* ============================================================
+   MAPA INTERACTIVO DE LOTES  —  hoja de estilos
+   Todo va con prefijo .nx- para no chocar con tu web.
+   ============================================================ */
+
+/* --- BLINDAJE ---------------------------------------------------------
+   Anula los estilos de tu plantilla DENTRO del mapa (bordes, tipografías,
+   colores, resets agresivos…) sin tocar nada del resto de la página.
+   Solo afecta a las etiquetas HTML del widget; el dibujo SVG queda intacto. */
+.nx-wrap  :where(div,p,h1,h2,h3,h4,span,small,b,i,em,strong,label,input,button,a,ul,ol,li,img),
+.nx-tip   :where(div,p,span,small,b,i,em,strong),
+.nx-modal :where(div,p,h1,h2,h3,h4,span,small,b,i,em,strong,button,a){ all: revert; }
+
+/* el SVG no hereda bordes, sombras ni filtros de la plantilla */
+.nx-wrap svg, .nx-tip svg, .nx-modal svg{
+  border:0; outline:0; box-shadow:none; filter:none;
+  max-width:none; max-height:none; background:none;
+}
+
+.nx-wrap, .nx-tip, .nx-modal, .nx-wrap *, .nx-tip *, .nx-modal *,
+.nx-wrap *::before, .nx-wrap *::after { box-sizing: border-box; }
+.nx-wrap button, .nx-wrap input, .nx-tip *, .nx-modal button, .nx-modal a{
+  font-family:inherit; -webkit-appearance:none; appearance:none;
+}
+.nx-tip, .nx-modal{ font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: var(--nx-tinta); }
+
+.nx-wrap, .nx-tip, .nx-modal{
+  --nx-verde:      #1fa14a;   /* lote disponible            */
+  --nx-verde-hov:  #16c05c;   /* lote disponible - hover    */
+  --nx-ambar:      #e9a319;   /* lote reservado             */
+  --nx-rojo:       #d93838;   /* lote vendido               */
+  --nx-rojo-hov:   #ef4b4b;   /* lote vendido - hover       */
+  --nx-cta:        #25d366;   /* boton WhatsApp asesor      */
+  --nx-promo:      #ff8a1f;   /* boton promocion            */
+  --nx-tinta:      #12242f;
+  --nx-suave:      #5b7383;
+  --nx-borde:      #e3e9ee;
+  --nx-panel:      #ffffff;
+  --nx-contenedor: transparent; /* ←← FONDO DEL BLOQUE (transparente: se ve tu web) */
+  --nx-fondo:      #f4f7f9;   /* ← fondo del recuadro del plano, arriba   */
+  --nx-fondo2:     #eceff2;   /* ← fondo del recuadro del plano, abajo    */
+  --nx-plano:      #3b5366;   /* ← terreno y calles del plano             */
+  --nx-comun:      #63bf7c;   /* areas comunes nuevas                     */
+  --nx-recreativa: #44d351;   /* area recreativa                          */
+  --nx-tour:       #0f6f8c;   /* boton de recorrido virtual               */
+  --nx-radio:      14px;
+  --nx-sombra:     0 10px 30px -12px rgba(10,35,50,.35);
+  --nx-verde-area: #63bf7c;   /* areas verdes del proyecto  */
+  --nx-amenity:    #ffe2a4;   /* centro comercial / amenity */
+}
+
+.nx-wrap{
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--nx-tinta);
+  /* ← ANCHO DEL BLOQUE. El plano ocupa todo este ancho, y el ancho se limita
+     para que el mapa completo se vea al cargar, sin scroll ni huecos.
+     Los 230px son el aire del encabezado y la leyenda: súbelos o bájalos. */
+  max-width: min(1180px, calc((100vh - 230px) * 687.82 / 650.64 + 40px));
+  margin: 0 auto;
+  padding: 20px;
+  position: relative;
+  background: var(--nx-contenedor);   /* transparente: hereda el fondo de tu web */
+  border-radius: 20px;
+}
+
+/* ---------- tema oscuro (se activa solo si tu web es oscura) ---------- */
+.nx-dark{
+  --nx-tinta:  #e9f1f6;
+  --nx-suave:  #9fb4c1;
+  --nx-borde:  rgba(255,255,255,.15);
+  --nx-panel:  #16222c;
+  --nx-contenedor: transparent;
+  --nx-fondo:  #0f1a22;
+  --nx-fondo2: #0b141b;
+  --nx-plano:  #2c4356;
+  --nx-comun:  #4e9c68;
+  --nx-sombra: 0 10px 30px -12px rgba(0,0,0,.7);
+}
+.nx-dark .nx-zoom button{ background:rgba(22,34,44,.94); }
+.nx-dark .nx-zoom button:hover{ background:#1d2c38; }
+.nx-dark .nx-hint{ background:rgba(22,34,44,.92); }
+.nx-dark .nx-search{ background:rgba(255,255,255,.07); }
+.nx-dark .nx-cellv{ background:rgba(255,255,255,.06); }
+
+/* ---------- encabezado ---------- */
+.nx-head{ display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; justify-content:space-between; margin-bottom:14px; }
+.nx-sub{ margin:0; font-size:14px; color:var(--nx-suave); }
+.nx-sub b{ color:var(--nx-verde); }
+
+.nx-tools{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.nx-search{
+  display:flex; align-items:center; gap:7px; background:var(--nx-panel);
+  border:1px solid var(--nx-borde); border-radius:999px; padding:8px 14px; box-shadow:0 2px 8px -4px rgba(10,35,50,.25);
+}
+.nx-search input{ border:0; outline:0; font:inherit; font-size:14px; width:150px; background:transparent; color:inherit; }
+.nx-search svg{ width:15px; height:15px; flex:none; opacity:.5; }
+
+/* botón de recorrido virtual */
+.nx-tour{
+  display:inline-flex; align-items:center; gap:8px; text-decoration:none; cursor:pointer;
+  background:var(--nx-tour); color:#fff; font-size:14px; font-weight:700;
+  padding:9px 17px; border-radius:999px; box-shadow:0 8px 18px -10px var(--nx-tour);
+  transition:transform .12s ease, filter .12s ease;
+}
+.nx-tour:hover{ transform:translateY(-2px); filter:brightness(1.08); }
+.nx-tour svg{ width:17px; height:17px; fill:currentColor; flex:none; }
+.nx-tour[hidden]{ display:none; }
+.nx-tour.nx-tour-off{ cursor:default; opacity:.85; }
+.nx-tour.nx-tour-off:hover{ transform:none; filter:none; }
+
+/* ---------- leyenda ---------- */
+.nx-legend{ display:flex; flex-wrap:wrap; gap:14px; margin:0 0 10px; font-size:13px; color:var(--nx-suave); }
+.nx-legend span{ display:inline-flex; align-items:center; gap:7px; }
+.nx-dot{ width:12px; height:12px; border-radius:4px; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08); }
+.nx-sync{ margin-left:auto; font-size:12px; opacity:.75; }
+.nx-sync.nx-err{ color:#d93838; opacity:1; }
+
+/* ---------- lienzo del mapa ---------- */
+.nx-stage{
+  position:relative; background:linear-gradient(170deg, var(--nx-fondo) 0%, var(--nx-fondo2) 100%);
+  border:1px solid var(--nx-borde);
+  border-radius:var(--nx-radio); overflow:hidden; box-shadow:var(--nx-sombra);
+  touch-action:none; cursor:default; user-select:none;
+}
+.nx-stage.nx-pan{ cursor:grab; }              /* solo cuando hay zoom */
+.nx-stage.nx-pan.nx-drag{ cursor:grabbing; }
+
+/* el plano ocupa todo el ancho del bloque y crece o encoge con él */
+.nx-stage{ height:auto; }
+.nx-stage svg{ display:block; width:100%; height:auto; transform-origin:0 0; will-change:transform; }
+
+/* colores del plano (antes venian dentro del SVG) */
+.nx-wrap svg .mpc-1{ fill:#39b54a; stroke:#fff; stroke-miterlimit:10; stroke-width:.75px; }
+.nx-wrap svg .mpc-2{ fill:var(--nx-plano); stroke:#fff; stroke-miterlimit:10; }  /* silueta del terreno */
+.nx-wrap svg .mpc-3{ fill:var(--nx-recreativa); stroke:#fff; stroke-miterlimit:10; stroke-width:.75px; }
+.nx-wrap svg .mpc-4{ fill:#f8a336; }   /* detalles del area recreativa */
+.nx-wrap svg .mpc-5{ fill:#abe600; }
+.nx-wrap svg .mpc-6{ fill:#006edd; }
+.nx-wrap svg .mpc-7{ fill:#f89a22; }
+
+/* ---------- lotes ---------- */
+.nx-wrap svg .nx-lote{
+  cursor:pointer;
+  stroke:#fff; stroke-width:1.1;
+  /* sin transform: el lote NO se mueve ni se agranda al pasar el cursor,
+     así los números y el texto quedan siempre en su sitio */
+  transition:fill .16s ease, filter .16s ease, stroke .16s ease, opacity .18s ease;
+}
+.nx-wrap svg .nx-lote[data-estado="disponible"]{ fill:var(--nx-verde); }
+.nx-wrap svg .nx-lote[data-estado="reservado"] { fill:var(--nx-ambar); }
+.nx-wrap svg .nx-lote[data-estado="vendido"]   { fill:var(--nx-rojo); }
+
+/* efecto al pasar el mouse: se aclara, se remarca el borde y proyecta sombra
+   (sin desplazamiento, para que el número del lote no se mueva) */
+.nx-wrap svg .nx-lote.nx-hot{
+  filter:url(#nx-shadow) brightness(1.12);
+  stroke:#ffffff; stroke-width:2.6;
+}
+.nx-wrap svg .nx-lote[data-estado="disponible"].nx-hot{ fill:var(--nx-verde-hov); }
+.nx-wrap svg .nx-lote[data-estado="vendido"].nx-hot   { fill:var(--nx-rojo-hov); }
+
+/* lote seleccionado: borde animado permanente */
+.nx-wrap svg .nx-lote.nx-sel{
+  stroke:#0b1f2a; stroke-width:2.4; stroke-dasharray:5 3;
+  filter:url(#nx-shadow);
+  animation:nx-march 1s linear infinite;
+}
+@keyframes nx-march{ to{ stroke-dashoffset:-16; } }
+
+/* atenuar los demas cuando hay busqueda activa */
+.nx-wrap svg.nx-filtrando .nx-lote{ opacity:.25; }
+.nx-wrap svg.nx-filtrando .nx-lote.nx-match{ opacity:1; }
+
+/* areas comunes (no vendibles) */
+.nx-wrap svg #mp-espacio_verde, .nx-wrap svg #mp-espacio_verde-2{ fill:var(--nx-verde-area); }
+.nx-wrap svg #mp-NUEVAS_AREAS_COMUNES, .nx-wrap svg #mp-NUEVAS_AREAS_COMUNES-2{ fill:var(--nx-comun); }
+.nx-wrap svg .nx-label-area{
+  pointer-events:none; fill:#0d3a20; font-weight:800; text-anchor:middle;
+  dominant-baseline:central; opacity:.8; font-family:system-ui, Arial, sans-serif;
+  letter-spacing:.02em; paint-order:stroke; stroke:rgba(255,255,255,.45); stroke-width:.8px;
+}
+
+/* etiquetas de numero de lote */
+.nx-wrap svg .nx-label{
+  pointer-events:none; fill:#fff; font-weight:700; text-anchor:middle;
+  dominant-baseline:central; paint-order:stroke;
+  stroke:rgba(0,0,0,.28); stroke-width:.6px; letter-spacing:-.02em;
+  font-family:system-ui, Arial, sans-serif;
+}
+.nx-wrap svg .nx-label-sub{ font-weight:700; opacity:.82; }
+.nx-wrap svg .nx-label-mz{
+  pointer-events:none; fill:#0e2a1a; font-weight:800; text-anchor:middle;
+  dominant-baseline:central; opacity:.55; font-family:system-ui, Arial, sans-serif;
+}
+
+/* ---------- pantalla de carga con el logo ---------- */
+.nx-carga{
+  position:absolute; inset:0; z-index:6;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;
+  background:var(--nx-plano);          /* mismo color que el terreno del plano */
+  transition:opacity .45s ease;
+}
+.nx-carga.nx-off{ opacity:0; pointer-events:none; }
+.nx-carga[hidden]{ display:none; }
+.nx-carga .nx-logo{
+  width:min(48%, 250px); height:auto; fill:#fff;
+  animation:nx-latir 1.7s ease-in-out infinite;
+}
+@keyframes nx-latir{ 0%,100%{ opacity:.6; transform:scale(.98) } 50%{ opacity:1; transform:scale(1) } }
+.nx-carga p{
+  margin:0; font-size:12px; font-weight:700; letter-spacing:.14em;
+  text-transform:uppercase; color:rgba(255,255,255,.7);
+}
+.nx-barra{
+  width:min(46%, 200px); height:3px; border-radius:3px;
+  background:rgba(255,255,255,.2); overflow:hidden;
+}
+.nx-barra i{
+  display:block; width:38%; height:100%; border-radius:3px; background:#fff;
+  animation:nx-corre 1.15s ease-in-out infinite;
+}
+@keyframes nx-corre{ from{ transform:translateX(-110%) } to{ transform:translateX(280%) } }
+
+/* ---------- controles de zoom ---------- */
+.nx-zoom{ position:absolute; right:12px; bottom:12px; display:flex; flex-direction:column; gap:6px; z-index:3; }
+.nx-zoom button{
+  width:36px; height:36px; border-radius:10px; border:1px solid var(--nx-borde);
+  background:rgba(255,255,255,.94); color:var(--nx-tinta); font-size:17px; font-weight:700;
+  cursor:pointer; box-shadow:0 4px 12px -6px rgba(10,35,50,.5); line-height:1;
+}
+.nx-zoom button:hover{ background:#fff; }
+.nx-hint{
+  position:absolute; left:12px; bottom:12px; z-index:3; font-size:12px; color:var(--nx-suave);
+  background:rgba(255,255,255,.92); border:1px solid var(--nx-borde); border-radius:999px; padding:5px 11px;
+  max-width:calc(100% - 70px); transition:opacity .4s ease; pointer-events:none;
+}
+.nx-hint.nx-off{ opacity:0; }
+
+/* ---------- tooltip (hover) ---------- */
+.nx-tip{
+  position:fixed; z-index:9998; pointer-events:none; opacity:0; transform:translateY(6px);
+  transition:opacity .13s ease, transform .13s ease;
+  background:rgba(12,32,42,.96); color:#fff; border-radius:11px; padding:9px 12px;
+  box-shadow:0 14px 34px -12px rgba(0,0,0,.6); min-width:150px;
+  font-size:13px; line-height:1.35;
+}
+.nx-tip.nx-on{ opacity:1; transform:translateY(0); }
+.nx-tip b{ display:block; font-size:14px; margin-bottom:5px; }
+.nx-tip .nx-badge{ display:inline-flex; align-items:center; gap:6px; font-weight:700; font-size:12px; }
+.nx-tip .nx-badge i{ width:8px; height:8px; border-radius:50%; display:inline-block; }
+.nx-tip small{ display:block; margin-top:5px; opacity:.72; font-size:11.5px; }
+
+/* ---------- modal ---------- */
+.nx-modal{ position:fixed; inset:0; z-index:9999; display:none; }
+.nx-modal.nx-on{ display:block; }
+.nx-veil{ position:absolute; inset:0; background:rgba(8,22,30,.6); backdrop-filter:blur(3px); animation:nx-fade .2s ease; }
+@keyframes nx-fade{ from{ opacity:0 } }
+.nx-card{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(400px, calc(100vw - 28px)); background:var(--nx-panel); border-radius:18px;
+  box-shadow:0 30px 70px -20px rgba(0,0,0,.55); overflow:hidden; animation:nx-pop .22s cubic-bezier(.2,.9,.3,1.3);
+}
+@keyframes nx-pop{ from{ opacity:0; transform:translate(-50%,-46%) scale(.94) } }
+.nx-card-top{ background:linear-gradient(135deg,#12482c,#1fa14a); color:#fff; padding:18px 20px 16px; position:relative; }
+.nx-card-top h3{ margin:0; font-size:21px; font-weight:800; letter-spacing:-.02em; }
+.nx-card-top p{ margin:3px 0 0; font-size:13px; opacity:.85; }
+.nx-close{
+  position:absolute; top:12px; right:12px; width:30px; height:30px; border-radius:50%;
+  border:0; background:rgba(255,255,255,.18); color:#fff; font-size:17px; cursor:pointer; line-height:1;
+}
+.nx-close:hover{ background:rgba(255,255,255,.3); }
+.nx-chip{
+  display:inline-flex; align-items:center; gap:6px; margin-top:10px; padding:4px 11px; border-radius:999px;
+  background:rgba(255,255,255,.18); font-size:12px; font-weight:700;
+}
+.nx-chip i{ width:8px; height:8px; border-radius:50%; background:#8ff0ad; display:inline-block; }
+
+.nx-card-body{ padding:16px 20px 20px; }
+.nx-rows{ display:grid; grid-template-columns:repeat(auto-fit,minmax(104px,1fr)); gap:10px; margin-bottom:14px; }
+.nx-cellv{ background:var(--nx-fondo); border:1px solid var(--nx-borde); border-radius:12px; padding:10px; }
+.nx-cellv span{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--nx-suave); font-weight:700; }
+.nx-cellv b{ display:block; font-size:17px; margin-top:2px; white-space:nowrap; letter-spacing:-.01em; }
+.nx-note{ font-size:12.5px; color:var(--nx-suave); margin:0 0 14px; }
+
+.nx-btn{
+  display:flex; align-items:center; justify-content:center; gap:9px; width:100%; padding:13px 14px;
+  border:0; border-radius:12px; font:inherit; font-size:15px; font-weight:700; color:#fff;
+  cursor:pointer; text-decoration:none; margin-bottom:9px; transition:transform .12s ease, box-shadow .12s ease, filter .12s;
+}
+.nx-btn:hover{ transform:translateY(-2px); filter:brightness(1.06); }
+.nx-btn svg{ width:19px; height:19px; fill:currentColor; flex:none; }
+.nx-btn-asesor{ background:var(--nx-cta); box-shadow:0 10px 22px -12px var(--nx-cta); }
+.nx-btn-promo { background:var(--nx-promo); box-shadow:0 10px 22px -12px var(--nx-promo); }
+.nx-btn-off{ background:#94a6b3; cursor:not-allowed; box-shadow:none; }
+.nx-btn-off:hover{ transform:none; filter:none; }
+.nx-legal{ text-align:center; font-size:11.5px; color:var(--nx-suave); margin:8px 0 0; }
+
+@media (max-width:760px){
+  /* en móvil el plano ocupa más alto para que los números se lean */
+  .nx-stage{ height:64vh; min-height:340px; }
+  .nx-stage svg{ height:100%; width:100%; }
+}
+@media (max-width:520px){
+  .nx-wrap{ padding:10px; }
+  .nx-tools{ width:100%; }
+  .nx-search{ flex:1; }
+  .nx-search input{ width:100%; }
+  .nx-card{ top:auto; bottom:0; left:0; transform:none; width:100%; border-radius:18px 18px 0 0; animation:nx-up .25s ease; }
+  @keyframes nx-up{ from{ transform:translateY(100%) } }
+  .nx-tip{ display:none; }
+}
+</style>
+
+<div class="nx-wrap" id="nx-app">
+
+  <div class="nx-head">
+    <div>
+      <p class="nx-sub">Lotes desde <b id="nx-desde">$45.000</b> · Entrada <b id="nx-entrada">$15.000</b> · <span id="nx-contador">—</span></p>
+    </div>
+    <div class="nx-tools">
+      <a class="nx-tour" id="nx-tour" href="#" target="_blank" rel="noopener" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1.4 6.2l5.2 3.3c.5.3.5 1 0 1.3l-5.2 3.3c-.5.3-1.2 0-1.2-.6V8.8c0-.6.7-1 1.2-.6z"/></svg>
+        Recorrido virtual
+      </a>
+      <label class="nx-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="nx-q" type="search" placeholder="Ej: manzana 5, lote 3…" autocomplete="off">
+      </label>
+    </div>
+  </div>
+
+  <div class="nx-legend">
+    <span><i class="nx-dot" style="background:#1fa14a"></i> Disponible</span>
+    <span><i class="nx-dot" style="background:#e9a319"></i> Reservado</span>
+    <span><i class="nx-dot" style="background:#d93838"></i> Vendido</span>
+    <span class="nx-sync" id="nx-sync"></span>
+  </div>
+
+  <div class="nx-stage" id="nx-stage">
+    <svg id="nx-mapa" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 687.82 650.64" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Plano de lotes">
+  
+  <g id="mp-Capa_370" data-name="Capa 370">
+    <path id="mp-terreno" class="mpc-2" d="M50.57,647.25c-9.06-86.4-18.11-172.8-27.17-259.2,0-.07-.02-.13-.03-.2-.23-1.38-.59-3.39-1.07-5.8-1.25-6.18-2.08-8.6-2.76-11.74-.52-2.39-.5-3.38-1.12-15.91-.46-9.28-.43-11.32-.61-13.57,0,0-.07-.85-.17-1.75-.56-5.33-3.54-24.26-4-27.32-.72-4.79-1.45-11.68-1.29-20.37.02-.96-.38-1.88-1.11-2.51-.44-.38-.91-.86-1.35-1.45-1-1.34-1.4-2.68-1.58-3.53-.04-.2-.06-.4-.06-.6-.07-40.9-.14-81.81-.21-122.71,0-1.78-1.45-3.22-3.23-3.22h-.06c-1.76,0-3.19-1.41-3.23-3.17-.35-18.49-.69-36.98-1.04-55.48-.03-1.43.89-2.71,2.25-3.14.73-.23,1.46-.46,2.19-.69,1.37-.43,2.29-1.71,2.25-3.15-.57-26.57-1.14-53.14-1.71-79.71-.04-1.79,1.39-3.27,3.19-3.3C233.8,5.99,458.93,3.25,684.05.5c1.95-.02,3.48,1.68,3.24,3.62-26.06,212.14-52.12,424.28-78.18,636.41-.2,1.6-1.55,2.81-3.16,2.83-184.05,2.26-368.09,4.51-552.14,6.77-1.67.02-3.07-1.23-3.25-2.89Z"/>
+  </g>
+  <g id="mp-_área_recreativa" data-name="área recreativa">
+    <path id="mp-area_recreativa" class="mpc-3" d="M21.4,297.58c22.16,0,44.31.01,66.47.02v-7.4h2.98c4.67,3.23,10.55,8.01,16.26,14.81,4.58,5.46,7.82,10.76,10.09,15.15.47.73,1.12,1.96,1.23,3.53.08,1.15-.14,2.36-1.02,4.28-1.57,3.44-2.89,4.01-4.04,6.27-1.35,2.65-1.22,5.18-1.11,7.45.3,5.9,3.29,10.08,4.64,11.74.45.54,1.18,1.59,1.45,3.06.55,3.05-1.35,5.38-1.66,5.74-2.11,4.44-5.42,10.25-10.55,16.21-5.43,6.3-11.02,10.59-15.28,13.36-1.53.82-4.71,2.83-6.55,6.71-.59,1.23-.92,2.41-1.11,3.41l-.42,14.39c-.05,1.75-1.48,3.14-3.23,3.14h-4.95v59.32h7.28c1.01,0,1.84.82,1.86,1.83l1.93,143.45c-9.62.08-19.24.16-28.85.24-8.18-78.85-16.36-157.71-24.54-236.56-.94-4.46-1.72-8.01-2.23-10.32-1.42-6.43-1.75-7.71-2.01-10.43-.21-2.24-.07-2.24-.42-7.64-.28-4.36-.36-4.14-.51-6.95-.18-3.56-.05-4-.26-8.78-.11-2.68-.17-4.02-.33-5.45-.27-2.39-.54-3.31-.94-6.36-.28-2.13-.22-2.47-.51-4.73-.27-2.12-.54-3.67-.67-4.39,0,0-.89-5.18-1.84-12.5-.39-3.02-.86-7.31-1.15-12.62Z"/>
+    <path class="mpc-6" d="M89.83,367.56c.48-8.97.72-13.47.85-13.96,2.28-8.32,10.01-7.11,13.79-16.17,1.83-4.39,2.82-11.38-.51-14.81-2-2.06-3.96-1.18-13.96-3.57-4.67-1.12-7-1.68-8.68-2.55-6.46-3.37-6.34-8.04-11.74-12.26-6.54-5.1-14.76-4.55-16.68-4.43-6.56.44-18.71,3.82-20.43,12.77-.95,4.96,1.42,11.05,5.62,13.79,4.41,2.88,7.65-.02,13.51,3.47,1.25.74,5.16,3.16,6.75,7.93.32.95,1.4,4.21.17,7.66-1.19,3.34-3.6,4.17-6.47,7.15,0,0-3.45,3.59-5.96,10.72-4.28,12.2,9.57,19.42,7.49,33.19-1.83,12.12-14.04,16.43-11.32,23.06,1.46,3.56,6.64,6.38,10.98,5.53,3.05-.6,4.89-2.86,5.19-3.23,2.15-2.72,1.75-5.53,2.3-10.55,0,0,.58-5.29,2.21-10.55,4.28-13.77,24.32-14.14,26.55-26.64.02-.12,0,.04.34-6.55Z"/>
+    <ellipse class="mpc-5" cx="70.64" cy="361.76" rx="15.95" ry="8.29" transform="translate(-293.32 303.54) rotate(-69.86)"/>
+    <polygon class="mpc-6" points="29.47 342.65 39.74 342.65 39.74 380.43 33.87 380.43 29.47 342.65"/>
+    <polygon class="mpc-7" points="44.55 430.63 56.47 430.63 56.47 452.41 44.98 452.41 44.55 430.63"/>
+    <path class="mpc-6" d="M51.23,463.35c2.28.16,2.68,1.99,4.6,2,2.03,0,2.44-2.03,4.51-2,2.06.03,3.5,2.08,3.74,2.43,1.57,2.23,1.12,4.83.98,5.66-.6,3.5-3.62,8.29-8.68,8.55-4.72.25-7.96-3.6-9.19-6.43-1.16-2.65-1.75-7.16.66-9.16.87-.72,2.16-1.14,3.38-1.05Z"/>
+    <polygon class="mpc-4" points="60.93 506.5 75.11 506.5 75.11 542.11 67.32 542.11 67.32 582.2 76.13 582.2 76.13 618.07 60.42 618.07 60.42 581.94 62.08 581.94 62.08 542.5 60.93 506.5"/>
+    <path class="mpc-6" d="M61.53,542.71h-12c-.24-12.05-.47-24.1-.71-36.15,4.04-.02,8.07-.04,12.11-.06l1.15,36.21h-.55Z"/>
+  </g>
+  <g id="mp-Capa_368" data-name="Capa 368">
+    <path id="mp-_05-Mz01" data-name="05-Mz01" class="mpc-1" d="M80.69,135.86l.28,21.84c.04,3.34-2.66,6.08-6.03,6.13l-21.69.28-.17-27.93c9.21-.1,18.42-.21,27.62-.32Z"/>
+  </g>
+  <g id="mp-Capa_367" data-name="Capa 367">
+    <path id="mp-_06-Mz01" data-name="06-Mz01" class="mpc-1" d="M53.07,136.18l.17,27.93-20.85.27c-3.38.04-6.15-2.63-6.19-5.97l-.29-21.92c9.05-.1,18.11-.21,27.16-.32Z"/>
+  </g>
+  <g id="mp-Capa_366" data-name="Capa 366">
+    <path id="mp-_07-Mz01" data-name="07-Mz01" class="mpc-1" d="M52.91,110.52l.16,25.66c-9.05.11-18.1.21-27.16.32l-.33-25.66c9.11-.1,18.22-.21,27.33-.32Z"/>
+  </g>
+  <g id="mp-Capa_365" data-name="Capa 365">
+    <path id="mp-_10-Mz01" data-name="10-Mz01" class="mpc-1" d="M52.42,31.7l.17,27.49c-9.22.11-18.45.21-27.68.32l-.28-21.4c-.04-3.34,2.66-6.08,6.03-6.13l21.75-.28Z"/>
+  </g>
+  <g id="mp-Capa_364" data-name="Capa 364">
+    <path id="mp-_01-Mz01" data-name="01-Mz01" class="mpc-1" d="M79.41,37.4l.28,21.47c-9.03.1-18.07.21-27.1.32l-.17-27.49,20.8-.27c3.38-.04,6.15,2.63,6.19,5.97Z"/>
+  </g>
+  <g id="mp-Capa_363" data-name="Capa 363">
+    <path id="mp-_02-Mz01" data-name="02-Mz01" class="mpc-1" d="M79.69,58.88l.33,25.66c-9.09.1-18.18.21-27.27.31l-.17-25.66c9.03-.1,18.07-.21,27.1-.32Z"/>
+  </g>
+  <g id="mp-Capa_362" data-name="Capa 362">
+    <path id="mp-_09-Mz01" data-name="09-Mz01" class="mpc-1" d="M52.59,59.19l.17,25.66c-9.17.11-18.34.21-27.51.31l-.33-25.65c9.23-.11,18.45-.21,27.68-.32Z"/>
+  </g>
+  <g id="mp-Capa_361" data-name="Capa 361">
+    <path id="mp-_08-Mz01" data-name="08-Mz01" class="mpc-1" d="M52.75,84.85l.16,25.66c-9.11.11-18.22.22-27.33.32l-.33-25.68c9.17-.1,18.34-.2,27.51-.31Z"/>
+  </g>
+  <g id="mp-Capa_360" data-name="Capa 360">
+    <path id="mp-_03-Mz01" data-name="03-Mz01" class="mpc-1" d="M80.02,84.54l.33,25.66c-9.15.11-18.29.22-27.44.32l-.16-25.66c9.09-.1,18.18-.21,27.27-.31Z"/>
+  </g>
+  <g id="mp-Capa_359" data-name="Capa 359">
+    <path id="mp-_04-Mz01" data-name="04-Mz01" class="mpc-1" d="M80.35,110.2l.33,25.66c-9.2.11-18.41.22-27.62.32l-.16-25.66c9.15-.1,18.3-.21,27.44-.32Z"/>
+  </g>
+  <g id="mp-Capa_358" data-name="Capa 358">
+    <path id="mp-_05-Mz02" data-name="05-Mz02" class="mpc-1" d="M145.41,135.02l.28,21.84c.04,3.34-2.66,6.08-6.03,6.13l-21.69.28-.17-27.93c9.21-.1,18.42-.21,27.62-.32Z"/>
+  </g>
+  <g id="mp-Capa_357" data-name="Capa 357">
+    <path id="mp-_06-Mz02" data-name="06-Mz02" class="mpc-1" d="M117.79,135.34l.17,27.93-20.85.27c-3.38.04-6.15-2.63-6.19-5.97l-.29-21.92c9.05-.1,18.11-.21,27.16-.32Z"/>
+  </g>
+  <g id="mp-Capa_356" data-name="Capa 356">
+    <path id="mp-_07-Mz02" data-name="07-Mz02" class="mpc-1" d="M117.63,109.67l.16,25.66c-9.05.11-18.1.21-27.16.32l-.33-25.66c9.11-.1,18.22-.21,27.33-.32Z"/>
+  </g>
+  <g id="mp-Capa_355" data-name="Capa 355">
+    <path id="mp-_10-Mz02" data-name="10-Mz02" class="mpc-1" d="M117.14,30.86l.17,27.49c-9.22.11-18.45.21-27.68.32l-.28-21.4c-.04-3.34,2.66-6.08,6.03-6.13l21.75-.28Z"/>
+  </g>
+  <g id="mp-Capa_354" data-name="Capa 354">
+    <path id="mp-_01-Mz02" data-name="01-Mz02" class="mpc-1" d="M144.13,36.56l.28,21.47c-9.03.1-18.07.21-27.1.32l-.17-27.49,20.8-.27c3.38-.04,6.15,2.63,6.19,5.97Z"/>
+  </g>
+  <g id="mp-Capa_353" data-name="Capa 353">
+    <path id="mp-_02-Mz02" data-name="02-Mz02" class="mpc-1" d="M144.41,58.03l.33,25.66c-9.09.1-18.18.21-27.27.31l-.17-25.66c9.03-.1,18.07-.21,27.1-.32Z"/>
+  </g>
+  <g id="mp-Capa_352" data-name="Capa 352">
+    <path id="mp-_09-Mz02" data-name="09-Mz02" class="mpc-1" d="M117.31,58.35l.17,25.66c-9.17.11-18.34.21-27.51.31l-.33-25.65c9.23-.11,18.45-.21,27.68-.32Z"/>
+  </g>
+  <g id="mp-Capa_351" data-name="Capa 351">
+    <path id="mp-_08-Mz02" data-name="08-Mz02" class="mpc-1" d="M117.48,84.01l.16,25.66c-9.11.11-18.22.22-27.33.32l-.33-25.68c9.17-.1,18.34-.2,27.51-.31Z"/>
+  </g>
+  <g id="mp-Capa_350" data-name="Capa 350">
+    <path id="mp-_03-Mz02" data-name="03-Mz02" class="mpc-1" d="M144.74,83.7l.33,25.66c-9.15.11-18.29.22-27.44.32l-.16-25.66c9.09-.1,18.18-.21,27.27-.31Z"/>
+  </g>
+  <g id="mp-Capa_349" data-name="Capa 349">
+    <path id="mp-_04-Mz02" data-name="04-Mz02" class="mpc-1" d="M145.08,109.36l.33,25.66c-9.2.11-18.41.22-27.62.32l-.16-25.66c9.15-.1,18.3-.21,27.44-.32Z"/>
+  </g>
+  <g id="mp-Capa_348" data-name="Capa 348">
+    <path id="mp-_05-Mz03" data-name="05-Mz03" class="mpc-1" d="M210.17,134.22l.28,21.84c.04,3.34-2.66,6.08-6.03,6.13l-21.69.28-.17-27.93c9.21-.1,18.42-.21,27.62-.32Z"/>
+  </g>
+  <g id="mp-Capa_347" data-name="Capa 347">
+    <path id="mp-_06-Mz03" data-name="06-Mz03" class="mpc-1" d="M182.55,134.54l.17,27.93-20.85.27c-3.38.04-6.15-2.63-6.19-5.97l-.29-21.92c9.05-.1,18.11-.21,27.16-.32Z"/>
+  </g>
+  <g id="mp-Capa_346" data-name="Capa 346">
+    <path id="mp-_07-Mz03" data-name="07-Mz03" class="mpc-1" d="M182.39,108.88l.16,25.66c-9.05.11-18.1.21-27.16.32l-.33-25.66c9.11-.1,18.22-.21,27.33-.32Z"/>
+  </g>
+  <g id="mp-Capa_345" data-name="Capa 345">
+    <path id="mp-_10-Mz03" data-name="10-Mz03" class="mpc-1" d="M181.9,30.06l.17,27.49c-9.22.11-18.45.21-27.68.32l-.28-21.4c-.04-3.34,2.66-6.08,6.03-6.13l21.75-.28Z"/>
+  </g>
+  <g id="mp-Capa_344" data-name="Capa 344">
+    <path id="mp-_01-Mz03" data-name="01-Mz03" class="mpc-1" d="M208.89,35.76l.28,21.47c-9.03.1-18.07.21-27.1.32l-.17-27.49,20.8-.27c3.38-.04,6.15,2.63,6.19,5.97Z"/>
+  </g>
+  <g id="mp-Capa_343" data-name="Capa 343">
+    <path id="mp-_02-Mz03" data-name="02-Mz03" class="mpc-1" d="M209.17,57.24l.33,25.66c-9.09.1-18.18.21-27.27.31l-.17-25.66c9.03-.1,18.07-.21,27.1-.32Z"/>
+  </g>
+  <g id="mp-Capa_342" data-name="Capa 342">
+    <path id="mp-_09-Mz03" data-name="09-Mz03" class="mpc-1" d="M182.07,57.55l.17,25.66c-9.17.11-18.34.21-27.51.31l-.33-25.65c9.23-.11,18.45-.21,27.68-.32Z"/>
+  </g>
+  <g id="mp-Capa_341" data-name="Capa 341">
+    <path id="mp-_08-Mz03" data-name="08-Mz03" class="mpc-1" d="M182.23,83.21l.16,25.66c-9.11.11-18.22.22-27.33.32l-.33-25.68c9.17-.1,18.34-.2,27.51-.31Z"/>
+  </g>
+  <g id="mp-Capa_340" data-name="Capa 340">
+    <path id="mp-_03-Mz03" data-name="03-Mz03" class="mpc-1" d="M209.5,82.9l.33,25.66c-9.15.11-18.29.22-27.44.32l-.16-25.66c9.09-.1,18.18-.21,27.27-.31Z"/>
+  </g>
+  <g id="mp-Capa_339" data-name="Capa 339">
+    <path id="mp-_04-Mz03" data-name="04-Mz03" class="mpc-1" d="M209.84,108.56l.33,25.66c-9.2.11-18.41.22-27.62.32l-.16-25.66c9.15-.1,18.3-.21,27.44-.32Z"/>
+  </g>
+  <g id="mp-Capa_338" data-name="Capa 338">
+    <path id="mp-_05-Mz04" data-name="05-Mz04" class="mpc-1" d="M273.82,133.4l.28,21.84c.04,3.34-2.66,6.08-6.03,6.13l-21.69.28-.17-27.93c9.21-.1,18.42-.21,27.62-.32Z"/>
+  </g>
+  <g id="mp-Capa_337" data-name="Capa 337">
+    <path id="mp-_06-Mz04" data-name="06-Mz04" class="mpc-1" d="M246.2,133.71l.17,27.93-20.85.27c-3.38.04-6.15-2.63-6.19-5.97l-.29-21.92c9.05-.1,18.11-.21,27.16-.32Z"/>
+  </g>
+  <g id="mp-Capa_336" data-name="Capa 336">
+    <path id="mp-_07-Mz04" data-name="07-Mz04" class="mpc-1" d="M246.04,108.05l.16,25.66c-9.05.11-18.1.21-27.16.32l-.33-25.66c9.11-.1,18.22-.21,27.33-.32Z"/>
+  </g>
+  <g id="mp-Capa_335" data-name="Capa 335">
+    <path id="mp-_10-Mz04" data-name="10-Mz04" class="mpc-1" d="M245.55,29.24l.17,27.49c-9.22.11-18.45.21-27.68.32l-.28-21.4c-.04-3.34,2.66-6.08,6.03-6.13l21.75-.28Z"/>
+  </g>
+  <g id="mp-Capa_334" data-name="Capa 334">
+    <path id="mp-_01-Mz04" data-name="01-Mz04" class="mpc-1" d="M272.54,34.93l.28,21.47c-9.03.1-18.07.21-27.1.32l-.17-27.49,20.8-.27c3.38-.04,6.15,2.63,6.19,5.97Z"/>
+  </g>
+  <g id="mp-Capa_333" data-name="Capa 333">
+    <path id="mp-_02-Mz04" data-name="02-Mz04" class="mpc-1" d="M272.82,56.41l.33,25.66c-9.09.1-18.18.21-27.27.31l-.17-25.66c9.03-.1,18.07-.21,27.1-.32Z"/>
+  </g>
+  <g id="mp-Capa_332" data-name="Capa 332">
+    <path id="mp-_09-Mz04" data-name="09-Mz04" class="mpc-1" d="M245.72,56.73l.17,25.66c-9.17.11-18.34.21-27.51.31l-.33-25.65c9.23-.11,18.45-.21,27.68-.32Z"/>
+  </g>
+  <g id="mp-Capa_331" data-name="Capa 331">
+    <path id="mp-_08-Mz04" data-name="08-Mz04" class="mpc-1" d="M245.88,82.38l.16,25.66c-9.11.11-18.22.22-27.33.32l-.33-25.68c9.17-.1,18.34-.2,27.51-.31Z"/>
+  </g>
+  <g id="mp-Capa_330" data-name="Capa 330">
+    <path id="mp-_03-Mz04" data-name="03-Mz04" class="mpc-1" d="M273.15,82.07l.33,25.66c-9.15.11-18.29.22-27.44.32l-.16-25.66c9.09-.1,18.18-.21,27.27-.31Z"/>
+  </g>
+  <g id="mp-Capa_329" data-name="Capa 329">
+    <path id="mp-_04-Mz04" data-name="04-Mz04" class="mpc-1" d="M273.49,107.73l.33,25.66c-9.2.11-18.41.22-27.62.32l-.16-25.66c9.15-.1,18.3-.21,27.44-.32Z"/>
+  </g>
+  <g id="mp-Capa_328" data-name="Capa 328">
+    <path id="mp-_05-Mz05" data-name="05-Mz05" class="mpc-1" d="M337.47,132.57l.28,21.84c.04,3.34-2.66,6.08-6.03,6.13l-21.69.28-.17-27.93c9.21-.1,18.42-.21,27.62-.32Z"/>
+  </g>
+  <g id="mp-Capa_327" data-name="Capa 327">
+    <path id="mp-_06-Mz05" data-name="06-Mz05" class="mpc-1" d="M309.85,132.89l.17,27.93-20.85.27c-3.38.04-6.15-2.63-6.19-5.97l-.29-21.92c9.05-.1,18.11-.21,27.16-.32Z"/>
+  </g>
+  <g id="mp-Capa_326" data-name="Capa 326">
+    <path id="mp-_07-Mz05" data-name="07-Mz05" class="mpc-1" d="M309.69,107.22l.16,25.66c-9.05.11-18.1.21-27.16.32l-.33-25.66c9.11-.1,18.22-.21,27.33-.32Z"/>
+  </g>
+  <g id="mp-Capa_325" data-name="Capa 325">
+    <path id="mp-_10-Mz05" data-name="10-Mz05" class="mpc-1" d="M309.2,28.41l.17,27.49c-9.22.11-18.45.21-27.68.32l-.28-21.4c-.04-3.34,2.66-6.08,6.03-6.13l21.75-.28Z"/>
+  </g>
+  <g id="mp-Capa_324" data-name="Capa 324">
+    <path id="mp-_01-Mz05" data-name="01-Mz05" class="mpc-1" d="M336.19,34.11l.28,21.47c-9.03.1-18.07.21-27.1.32l-.17-27.49,20.8-.27c3.38-.04,6.15,2.63,6.19,5.97Z"/>
+  </g>
+  <g id="mp-Capa_323" data-name="Capa 323">
+    <path id="mp-_02-Mz05" data-name="02-Mz05" class="mpc-1" d="M336.47,55.58l.33,25.66c-9.09.1-18.18.21-27.27.31l-.17-25.66c9.03-.1,18.07-.21,27.1-.32Z"/>
+  </g>
+  <g id="mp-Capa_322" data-name="Capa 322">
+    <path id="mp-_09-Mz05" data-name="09-Mz05" class="mpc-1" d="M309.37,55.9l.17,25.66c-9.17.11-18.34.21-27.51.31l-.33-25.65c9.23-.11,18.45-.21,27.68-.32Z"/>
+  </g>
+  <g id="mp-Capa_321" data-name="Capa 321">
+    <path id="mp-_08-Mz05" data-name="08-Mz05" class="mpc-1" d="M309.54,81.56l.16,25.66c-9.11.11-18.22.22-27.33.32l-.33-25.68c9.17-.1,18.34-.2,27.51-.31Z"/>
+  </g>
+  <g id="mp-Capa_320" data-name="Capa 320">
+    <path id="mp-_03-Mz05" data-name="03-Mz05" class="mpc-1" d="M336.8,81.24l.33,25.66c-9.15.11-18.29.22-27.44.32l-.16-25.66c9.09-.1,18.18-.21,27.27-.31Z"/>
+  </g>
+  <g id="mp-Capa_319" data-name="Capa 319">
+    <path id="mp-_04-Mz05" data-name="04-Mz05" class="mpc-1" d="M337.14,106.91l.33,25.66c-9.2.11-18.41.22-27.62.32l-.16-25.66c9.15-.1,18.3-.21,27.44-.32Z"/>
+  </g>
+  <g id="mp-Capa_318" data-name="Capa 318">
+    <path id="mp-_05-Mz06" data-name="05-Mz06" class="mpc-1" d="M401.12,131.74l.28,21.84c.04,3.34-2.66,6.08-6.03,6.13l-21.69.28-.17-27.93c9.21-.1,18.42-.21,27.62-.32Z"/>
+  </g>
+  <g id="mp-Capa_317" data-name="Capa 317">
+    <path id="mp-_06-Mz06" data-name="06-Mz06" class="mpc-1" d="M373.5,132.06l.17,27.93-20.85.27c-3.38.04-6.15-2.63-6.19-5.97l-.29-21.92c9.05-.1,18.11-.21,27.16-.32Z"/>
+  </g>
+  <g id="mp-Capa_316" data-name="Capa 316">
+    <path id="mp-_07-Mz06" data-name="07-Mz06" class="mpc-1" d="M373.35,106.39l.16,25.66c-9.05.11-18.1.21-27.16.32l-.33-25.66c9.11-.1,18.22-.21,27.33-.32Z"/>
+  </g>
+  <g id="mp-Capa_315" data-name="Capa 315">
+    <path id="mp-_10-Mz06" data-name="10-Mz06" class="mpc-1" d="M372.85,27.58l.17,27.49c-9.22.11-18.45.21-27.68.32l-.28-21.4c-.04-3.34,2.66-6.08,6.03-6.13l21.75-.28Z"/>
+  </g>
+  <g id="mp-Capa_314" data-name="Capa 314">
+    <path id="mp-_01-Mz06" data-name="01-Mz06" class="mpc-1" d="M399.84,33.28l.28,21.47c-9.03.1-18.07.21-27.1.32l-.17-27.49,20.8-.27c3.38-.04,6.15,2.63,6.19,5.97Z"/>
+  </g>
+  <g id="mp-Capa_313" data-name="Capa 313">
+    <path id="mp-_02-Mz06" data-name="02-Mz06" class="mpc-1" d="M400.12,54.75l.33,25.66c-9.09.1-18.18.21-27.27.31l-.17-25.66c9.03-.1,18.07-.21,27.1-.32Z"/>
+  </g>
+  <g id="mp-Capa_312" data-name="Capa 312">
+    <path id="mp-_09-Mz06" data-name="09-Mz06" class="mpc-1" d="M373.02,55.07l.17,25.66c-9.17.11-18.34.21-27.51.31l-.33-25.65c9.23-.11,18.45-.21,27.68-.32Z"/>
+  </g>
+  <g id="mp-Capa_311" data-name="Capa 311">
+    <path id="mp-_08-Mz06" data-name="08-Mz06" class="mpc-1" d="M373.19,80.73l.16,25.66c-9.11.11-18.22.22-27.33.32l-.33-25.68c9.17-.1,18.34-.2,27.51-.31Z"/>
+  </g>
+  <g id="mp-Capa_310" data-name="Capa 310">
+    <path id="mp-_03-Mz06" data-name="03-Mz06" class="mpc-1" d="M400.46,80.41l.33,25.66c-9.15.11-18.29.22-27.44.32l-.16-25.66c9.09-.1,18.18-.21,27.27-.31Z"/>
+  </g>
+  <g id="mp-Capa_309" data-name="Capa 309">
+    <path id="mp-_04-Mz06" data-name="04-Mz06" class="mpc-1" d="M400.79,106.08l.33,25.66c-9.2.11-18.41.22-27.62.32l-.16-25.66c9.15-.1,18.3-.21,27.44-.32Z"/>
+  </g>
+  <g id="mp-Capa_308" data-name="Capa 308">
+    <path id="mp-_05-Mz07" data-name="05-Mz07" class="mpc-1" d="M466.95,130.91l.28,21.84c.04,3.34-2.66,6.08-6.03,6.13l-21.69.28-.17-27.93c9.21-.1,18.42-.21,27.62-.32Z"/>
+  </g>
+  <g id="mp-Capa_307" data-name="Capa 307">
+    <path id="mp-_06-Mz07" data-name="06-Mz07" class="mpc-1" d="M439.33,131.23l.17,27.93-20.85.27c-3.38.04-6.15-2.63-6.19-5.97l-.29-21.92c9.05-.1,18.11-.21,27.16-.32Z"/>
+  </g>
+  <g id="mp-Capa_306" data-name="Capa 306">
+    <path id="mp-_07-Mz07" data-name="07-Mz07" class="mpc-1" d="M439.18,105.56l.16,25.66c-9.05.11-18.1.21-27.16.32l-.33-25.66c9.11-.1,18.22-.21,27.33-.32Z"/>
+  </g>
+  <g id="mp-Capa_305" data-name="Capa 305">
+    <path id="mp-_10-Mz07" data-name="10-Mz07" class="mpc-1" d="M438.68,26.75l.17,27.49c-9.22.11-18.45.21-27.68.32l-.28-21.4c-.04-3.34,2.66-6.08,6.03-6.13l21.75-.28Z"/>
+  </g>
+  <g id="mp-Capa_304" data-name="Capa 304">
+    <path id="mp-_01-Mz07" data-name="01-Mz07" class="mpc-1" d="M465.67,32.45l.28,21.47c-9.03.1-18.07.21-27.1.32l-.17-27.49,20.8-.27c3.38-.04,6.15,2.63,6.19,5.97Z"/>
+  </g>
+  <g id="mp-Capa_303" data-name="Capa 303">
+    <path id="mp-_02-Mz07" data-name="02-Mz07" class="mpc-1" d="M465.95,53.92l.33,25.66c-9.09.1-18.18.21-27.27.31l-.17-25.66c9.03-.1,18.07-.21,27.1-.32Z"/>
+  </g>
+  <g id="mp-Capa_302" data-name="Capa 302">
+    <path id="mp-_09-Mz07" data-name="09-Mz07" class="mpc-1" d="M438.85,54.24l.17,25.66c-9.17.11-18.34.21-27.51.31l-.33-25.65c9.23-.11,18.45-.21,27.68-.32Z"/>
+  </g>
+  <g id="mp-Capa_301" data-name="Capa 301">
+    <path id="mp-_08-Mz07" data-name="08-Mz07" class="mpc-1" d="M439.02,79.9l.16,25.66c-9.11.11-18.22.22-27.33.32l-.33-25.68c9.17-.1,18.34-.2,27.51-.31Z"/>
+  </g>
+  <g id="mp-Capa_300" data-name="Capa 300">
+    <path id="mp-_03-Mz07" data-name="03-Mz07" class="mpc-1" d="M466.29,79.58l.33,25.66c-9.15.11-18.29.22-27.44.32l-.16-25.66c9.09-.1,18.18-.21,27.27-.31Z"/>
+  </g>
+  <g id="mp-Capa_299" data-name="Capa 299">
+    <path id="mp-_04-Mz07" data-name="04-Mz07" class="mpc-1" d="M466.62,105.25l.33,25.66c-9.2.11-18.41.22-27.62.32l-.16-25.66c9.15-.1,18.3-.21,27.44-.32Z"/>
+  </g>
+  <g id="mp-Capa_298" data-name="Capa 298">
+    <path id="mp-_05-Mz08" data-name="05-Mz08" class="mpc-1" d="M530.61,130.08l.28,21.84c.04,3.34-2.66,6.08-6.03,6.13l-21.69.28-.17-27.93c9.21-.1,18.42-.21,27.62-.32Z"/>
+  </g>
+  <g id="mp-Capa_297" data-name="Capa 297">
+    <path id="mp-_06-Mz08" data-name="06-Mz08" class="mpc-1" d="M502.99,130.4l.17,27.93-20.85.27c-3.38.04-6.15-2.63-6.19-5.97l-.29-21.92c9.05-.1,18.11-.21,27.16-.32Z"/>
+  </g>
+  <g id="mp-Capa_296" data-name="Capa 296">
+    <path id="mp-_07-Mz08" data-name="07-Mz08" class="mpc-1" d="M502.83,104.73l.16,25.66c-9.05.11-18.1.21-27.16.32l-.33-25.66c9.11-.1,18.22-.21,27.33-.32Z"/>
+  </g>
+  <g id="mp-Capa_295" data-name="Capa 295">
+    <path id="mp-_10-Mz08" data-name="10-Mz08" class="mpc-1" d="M502.33,25.92l.17,27.49c-9.22.11-18.45.21-27.68.32l-.28-21.4c-.04-3.34,2.66-6.08,6.03-6.13l21.75-.28Z"/>
+  </g>
+  <g id="mp-Capa_294" data-name="Capa 294">
+    <path id="mp-_01-Mz08" data-name="01-Mz08" class="mpc-1" d="M529.32,31.62l.28,21.47c-9.03.1-18.07.21-27.1.32l-.17-27.49,20.8-.27c3.38-.04,6.15,2.63,6.19,5.97Z"/>
+  </g>
+  <g id="mp-Capa_293" data-name="Capa 293">
+    <path id="mp-_02-Mz08" data-name="02-Mz08" class="mpc-1" d="M529.6,53.09l.33,25.66c-9.09.1-18.18.21-27.27.31l-.17-25.66c9.03-.1,18.07-.21,27.1-.32Z"/>
+  </g>
+  <g id="mp-Capa_292" data-name="Capa 292">
+    <path id="mp-_09-Mz08" data-name="09-Mz08" class="mpc-1" d="M502.5,53.41l.17,25.66c-9.17.11-18.34.21-27.51.31l-.33-25.65c9.23-.11,18.45-.21,27.68-.32Z"/>
+  </g>
+  <g id="mp-Capa_291" data-name="Capa 291">
+    <path id="mp-_08-Mz08" data-name="08-Mz08" class="mpc-1" d="M502.67,79.07l.16,25.66c-9.11.11-18.22.22-27.33.32l-.33-25.68c9.17-.1,18.34-.2,27.51-.31Z"/>
+  </g>
+  <g id="mp-Capa_290" data-name="Capa 290">
+    <path id="mp-_03-Mz08" data-name="03-Mz08" class="mpc-1" d="M529.94,78.76l.33,25.66c-9.15.11-18.29.22-27.44.32l-.16-25.66c9.09-.1,18.18-.21,27.27-.31Z"/>
+  </g>
+  <g id="mp-Capa_289" data-name="Capa 289">
+    <path id="mp-_04-Mz08" data-name="04-Mz08" class="mpc-1" d="M530.27,104.42l.33,25.66c-9.2.11-18.41.22-27.62.32l-.16-25.66c9.15-.1,18.3-.21,27.44-.32Z"/>
+  </g>
+  <g id="mp-Capa_288" data-name="Capa 288">
+    <path id="mp-_05-Mz09" data-name="05-Mz09" class="mpc-1" d="M595.3,129.3l.28,21.84c.04,3.34-2.66,6.08-6.03,6.13l-21.69.28-.17-27.93c9.21-.1,18.42-.21,27.62-.32Z"/>
+  </g>
+  <g id="mp-Capa_287" data-name="Capa 287">
+    <path id="mp-_06-Mz09" data-name="06-Mz09" class="mpc-1" d="M567.68,129.62l.17,27.93-20.85.27c-3.38.04-6.15-2.63-6.19-5.97l-.29-21.92c9.05-.1,18.11-.21,27.16-.32Z"/>
+  </g>
+  <g id="mp-Capa_286" data-name="Capa 286">
+    <path id="mp-_07-Mz09" data-name="07-Mz09" class="mpc-1" d="M567.52,103.95l.16,25.66c-9.05.11-18.1.21-27.16.32l-.33-25.66c9.11-.1,18.22-.21,27.33-.32Z"/>
+  </g>
+  <g id="mp-Capa_285" data-name="Capa 285">
+    <path id="mp-_10-Mz09" data-name="10-Mz09" class="mpc-1" d="M567.03,25.14l.17,27.49c-9.22.11-18.45.21-27.68.32l-.28-21.4c-.04-3.34,2.66-6.08,6.03-6.13l21.75-.28Z"/>
+  </g>
+  <g id="mp-Capa_284" data-name="Capa 284">
+    <path id="mp-_01-Mz09" data-name="01-Mz09" class="mpc-1" d="M594.02,30.84l.28,21.47c-9.03.1-18.07.21-27.1.32l-.17-27.49,20.8-.27c3.38-.04,6.15,2.63,6.19,5.97Z"/>
+  </g>
+  <g id="mp-Capa_283" data-name="Capa 283">
+    <path id="mp-_02-Mz09" data-name="02-Mz09" class="mpc-1" d="M594.3,52.31l.33,25.66c-9.09.1-18.18.21-27.27.31l-.17-25.66c9.03-.1,18.07-.21,27.1-.32Z"/>
+  </g>
+  <g id="mp-Capa_282" data-name="Capa 282">
+    <path id="mp-_09-Mz09" data-name="09-Mz09" class="mpc-1" d="M567.2,52.63l.17,25.66c-9.17.11-18.34.21-27.51.31l-.33-25.65c9.23-.11,18.45-.21,27.68-.32Z"/>
+  </g>
+  <g id="mp-Capa_281" data-name="Capa 281">
+    <path id="mp-_08-Mz09" data-name="08-Mz09" class="mpc-1" d="M567.37,78.29l.16,25.66c-9.11.11-18.22.22-27.33.32l-.33-25.68c9.17-.1,18.34-.2,27.51-.31Z"/>
+  </g>
+  <g id="mp-Capa_280" data-name="Capa 280">
+    <path id="mp-_03-Mz09" data-name="03-Mz09" class="mpc-1" d="M594.64,77.98l.33,25.66c-9.15.11-18.29.22-27.44.32l-.16-25.66c9.09-.1,18.18-.21,27.27-.31Z"/>
+  </g>
+  <g id="mp-Capa_279" data-name="Capa 279">
+    <path id="mp-_04-Mz09" data-name="04-Mz09" class="mpc-1" d="M594.97,103.64l.33,25.66c-9.2.11-18.41.22-27.62.32l-.16-25.66c9.15-.1,18.3-.21,27.44-.32Z"/>
+  </g>
+  <g id="mp-Capa_278" data-name="Capa 278">
+    <path id="mp-_09-Mz10" data-name="09-Mz10" class="mpc-1" d="M631.41,24.73l.35,27.09-28.79.37-.29-22.07c-.04-2.77,2.21-5.05,5.01-5.09l23.71-.31Z"/>
+  </g>
+  <g id="mp-Capa_277" data-name="Capa 277">
+    <path id="mp-_01-Mz10" data-name="01-Mz10" class="mpc-1" d="M671.51,29.88c-.85,7.15-1.7,14.31-2.54,21.45l-37.2.48-.35-27.09,34.99-.45c3.07-.04,5.46,2.59,5.11,5.61Z"/>
+  </g>
+  <g id="mp-Capa_276" data-name="Capa 276">
+    <path id="mp-_02-Mz10" data-name="02-Mz10" class="mpc-1" d="M668.96,51.34c-1,8.4-1.99,16.79-2.99,25.19l-33.88.44-.33-25.15,37.2-.48Z"/>
+  </g>
+  <g id="mp-Capa_275" data-name="Capa 275">
+    <rect id="mp-_08-Mz10" data-name="08-Mz10" class="mpc-1" x="603.14" y="52.01" width="28.79" height="25.15" transform="translate(-.79 8.03) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_274" data-name="Capa 274">
+    <rect id="mp-_07-Mz10" data-name="07-Mz10" class="mpc-1" x="603.47" y="77.16" width="28.79" height="26.03" transform="translate(-1.12 8.04) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_273" data-name="Capa 273">
+    <path id="mp-_03-Mz10" data-name="03-Mz10" class="mpc-1" d="M665.97,76.53c-1.04,8.69-2.06,17.38-3.09,26.07l-30.45.4-.34-26.03,33.88-.44Z"/>
+  </g>
+  <g id="mp-Capa_272" data-name="Capa 272">
+    <path id="mp-_04-Mz10" data-name="04-Mz10" class="mpc-1" d="M662.88,102.61c-1.02,8.57-2.04,17.15-3.06,25.72l-27.06.35-.33-25.68,30.45-.4Z"/>
+  </g>
+  <g id="mp-Capa_271" data-name="Capa 271">
+    <rect id="mp-_06-Mz10" data-name="06-Mz10" class="mpc-1" x="603.81" y="103.19" width="28.79" height="25.68" transform="translate(-1.46 8.05) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_270" data-name="Capa 270">
+    <path id="mp-_05-Mz10" data-name="05-Mz10" class="mpc-1" d="M659.82,128.33c-.77,7.52-1.55,15.05-2.32,22.57-.29,2.84-2.41,5-4.96,5.03l-43.13.56c-2.8.04-5.11-2.49-5.15-5.64l-.28-21.8,55.85-.73Z"/>
+  </g>
+  <g id="mp-Capa_269" data-name="Capa 269">
+    <path id="mp-_01-Mz11" data-name="01-Mz11" class="mpc-1" d="M654.23,171.26c-.87,7.19-1.75,14.38-2.62,21.57-15.6,0-31.2,0-46.8,0l-.28-21.89c-.04-3.17,2.53-5.78,5.74-5.8,12.73-.1,25.46-.19,38.18-.28,3.49-.03,6.2,2.98,5.78,6.4Z"/>
+  </g>
+  <g id="mp-Capa_268" data-name="Capa 268">
+    <path id="mp-_02-Mz11" data-name="02-Mz11" class="mpc-1" d="M651.61,192.83c-1.03,8.52-2.07,17.03-3.1,25.55-14.46.04-28.91.07-43.37.11l-.33-25.66c15.6,0,31.2,0,46.8,0Z"/>
+  </g>
+  <g id="mp-Capa_267" data-name="Capa 267">
+    <path id="mp-_03-Mz11" data-name="03-Mz11" class="mpc-1" d="M648.51,218.38c-1.04,8.63-2.09,17.26-3.14,25.89-13.29.05-26.59.11-39.89.16l-.34-25.95c14.46-.04,28.91-.07,43.37-.11Z"/>
+  </g>
+  <g id="mp-Capa_266" data-name="Capa 266">
+    <path id="mp-_04-Mz11" data-name="04-Mz11" class="mpc-1" d="M645.36,244.27c-1.04,8.55-2.07,17.11-3.11,25.67-12.14,0-24.3.01-36.44.02l-.33-25.52c13.29-.05,26.59-.11,39.89-.16Z"/>
+  </g>
+  <g id="mp-Capa_265" data-name="Capa 265">
+    <path id="mp-_05-Mz11" data-name="05-Mz11" class="mpc-1" d="M642.25,269.93c-1.04,8.59-2.08,17.18-3.12,25.77l-32.98.43-.34-26.18c12.14,0,24.3-.01,36.44-.02Z"/>
+  </g>
+  <g id="mp-Capa_264" data-name="Capa 264">
+    <path id="mp-_06-Mz11" data-name="06-Mz11" class="mpc-1" d="M639.13,295.7c-.95,7.83-1.9,15.67-2.85,23.5-.35,2.85-2.77,5-5.66,5.04l-18.31.24c-3.19.04-5.81-2.48-5.85-5.65l-.3-22.7,32.98-.43Z"/>
+  </g>
+  <g id="mp-Capa_263" data-name="Capa 263">
+    <path id="mp-_05-Mz12" data-name="05-Mz12" class="mpc-1" d="M570.77,345.85l.36,27.88-28.25.37-.28-21.4c-.05-3.52,2.8-6.43,6.36-6.49,7.27-.12,14.54-.24,21.81-.37Z"/>
+  </g>
+  <g id="mp-Capa_262" data-name="Capa 262">
+    <path id="mp-_06-Mz12" data-name="06-Mz12" class="mpc-1" d="M596.16,345.42l.36,27.98-25.39.33-.36-27.88c8.47-.14,16.92-.29,25.39-.43Z"/>
+  </g>
+  <g id="mp-Capa_261" data-name="Capa 261">
+    <path id="mp-_01-Mz12" data-name="01-Mz12" class="mpc-1" d="M632.74,352.07c-.83,6.96-1.67,13.93-2.5,20.89l-33.72.44-.36-27.98c10.02-.17,20.03-.34,30.05-.51,3.91-.07,6.99,3.3,6.53,7.16Z"/>
+  </g>
+  <g id="mp-Capa_260" data-name="Capa 260">
+    <path id="mp-_02-Mz12" data-name="02-Mz12" class="mpc-1" d="M630.24,372.97c-.93,7.84-1.88,15.67-2.81,23.51-.39,3.21-3.11,5.63-6.37,5.65-8.05.07-16.11.14-24.16.2l-.38-28.93,33.72-.44Z"/>
+  </g>
+  <g id="mp-Capa_259" data-name="Capa 259">
+    <path id="mp-_03-Mz12" data-name="03-Mz12" class="mpc-1" d="M596.52,373.4l.38,28.93c-8.47.08-16.93.14-25.39.21l-.37-28.81,25.39-.33Z"/>
+  </g>
+  <g id="mp-Capa_258" data-name="Capa 258">
+    <path id="mp-_04-Mz12" data-name="04-Mz12" class="mpc-1" d="M571.13,373.73l.37,28.81c-7.27.07-14.54.13-21.81.19-3.56.03-6.48-2.79-6.53-6.32l-.29-22.31,28.25-.37Z"/>
+  </g>
+  <g id="mp-Capa_257" data-name="Capa 257">
+    <path id="mp-_05-Mz13" data-name="05-Mz13" class="mpc-1" d="M571.36,410.62l.44,34.04-27.54.36c.09-9.15.18-18.3.27-27.45.04-3.75,3.09-6.77,6.87-6.8,6.65-.05,13.3-.1,19.95-.15Z"/>
+  </g>
+  <g id="mp-Capa_256" data-name="Capa 256">
+    <path id="mp-_06-Mz13" data-name="06-Mz13" class="mpc-1" d="M597.11,410.43l.44,33.9-25.74.33-.44-34.04c8.58-.06,17.17-.13,25.74-.19Z"/>
+  </g>
+  <g id="mp-Capa_255" data-name="Capa 255">
+    <path id="mp-_01-Mz13" data-name="01-Mz13" class="mpc-1" d="M625.86,417.99c-1.1,8.67-2.2,17.34-3.31,26.01l-25,.33-.44-33.9,21.83-.16c4.19-.03,7.45,3.6,6.92,7.72Z"/>
+  </g>
+  <g id="mp-Capa_254" data-name="Capa 254">
+    <path id="mp-_02-Mz13" data-name="02-Mz13" class="mpc-1" d="M622.55,444c-1.19,9.43-2.4,18.87-3.6,28.29-.43,3.4-3.33,5.96-6.79,6.01l-14.17.18-.44-34.16,25-.33Z"/>
+  </g>
+  <g id="mp-Capa_253" data-name="Capa 253">
+    <rect id="mp-_03-Mz13" data-name="03-Mz13" class="mpc-1" x="572.03" y="444.49" width="25.74" height="34.16" transform="translate(-5.95 7.64) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_252" data-name="Capa 252">
+    <path id="mp-_04-Mz13" data-name="04-Mz13" class="mpc-1" d="M571.8,444.66l.44,34.16-21.23.28c-3.89.05-7.06-3.08-7.02-6.93.09-9.05.18-18.09.26-27.15l27.54-.36Z"/>
+  </g>
+  <g id="mp-Capa_251" data-name="Capa 251">
+    <path id="mp-_10-Mz14" data-name="10-Mz14" class="mpc-1" d="M573.35,487.87l.09,28.26-28.23.37-.29-22.18c-.04-3.38,2.69-6.15,6.1-6.19,7.44-.08,14.88-.17,22.33-.26Z"/>
+  </g>
+  <g id="mp-Capa_250" data-name="Capa 250">
+    <path id="mp-_01-Mz14" data-name="01-Mz14" class="mpc-1" d="M616.69,494.3c-.88,7.1-1.76,14.2-2.64,21.3l-40.61.53-.09-28.26c12.38-.14,24.77-.28,37.15-.42,3.73-.04,6.65,3.18,6.19,6.86Z"/>
+  </g>
+  <g id="mp-Capa_249" data-name="Capa 249">
+    <path id="mp-_02-Mz14" data-name="02-Mz14" class="mpc-1" d="M614.05,515.6c-1.04,8.39-2.09,16.79-3.13,25.19-12.47.06-24.95.11-37.41.17l-.07-24.83,40.61-.53Z"/>
+  </g>
+  <g id="mp-Capa_248" data-name="Capa 248">
+    <path id="mp-_09-Mz14" data-name="09-Mz14" class="mpc-1" d="M573.44,516.13l.07,24.83c-9.33.04-18.66.08-27.98.12l-.32-24.59,28.23-.37Z"/>
+  </g>
+  <g id="mp-Capa_247" data-name="Capa 247">
+    <path id="mp-_08-Mz14" data-name="08-Mz14" class="mpc-1" d="M573.51,540.96l.08,25.7-27.72.36-.34-25.94c9.32-.04,18.65-.08,27.98-.12Z"/>
+  </g>
+  <g id="mp-Capa_246" data-name="Capa 246">
+    <path id="mp-_03-Mz14" data-name="03-Mz14" class="mpc-1" d="M610.92,540.79c-1.05,8.47-2.1,16.95-3.16,25.42l-34.18.44-.08-25.7c12.47-.06,24.94-.11,37.41-.17Z"/>
+  </g>
+  <g id="mp-Capa_245" data-name="Capa 245">
+    <path id="mp-_04-Mz14" data-name="04-Mz14" class="mpc-1" d="M607.77,566.22c-1.06,8.59-2.13,17.19-3.2,25.78l-30.9.4-.08-25.74,34.18-.44Z"/>
+  </g>
+  <g id="mp-Capa_244" data-name="Capa 244">
+    <polygon id="mp-_07-Mz14" data-name="07-Mz14" class="mpc-1" points="573.59 566.66 573.66 592.4 546.2 592.76 545.87 567.02 573.59 566.66"/>
+  </g>
+  <g id="mp-Capa_243" data-name="Capa 243">
+    <path id="mp-_06-Mz14" data-name="06-Mz14" class="mpc-1" d="M573.66,592.4l.09,27.63-21.02.27c-3.4.04-6.2-2.65-6.25-6.03l-.28-21.52,27.46-.36Z"/>
+  </g>
+  <g id="mp-Capa_242" data-name="Capa 242">
+    <path id="mp-_05-Mz14" data-name="05-Mz14" class="mpc-1" d="M604.56,592c-.93,7.46-1.85,14.92-2.78,22.38-.38,3.04-2.96,5.32-6.04,5.36l-22,.29-.09-27.63,30.9-.4Z"/>
+  </g>
+  <g id="mp-Capa_241" data-name="Capa 241">
+    <path id="mp-_10-Mz15" data-name="10-Mz15" class="mpc-1" d="M507.35,488.2l.36,27.79-27.71.36-.26-20.35c-.05-4.11,3.26-7.48,7.41-7.53l20.2-.26Z"/>
+  </g>
+  <g id="mp-Capa_240" data-name="Capa 240">
+    <rect id="mp-_09-Mz15" data-name="09-Mz15" class="mpc-1" x="480.16" y="516.16" width="27.71" height="25.82" transform="translate(-6.84 6.47) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_239" data-name="Capa 239">
+    <rect id="mp-_08-Mz15" data-name="08-Mz15" class="mpc-1" x="480.5" y="541.98" width="27.71" height="25.66" transform="translate(-7.17 6.47) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_238" data-name="Capa 238">
+    <rect id="mp-_07-Mz15" data-name="07-Mz15" class="mpc-1" x="480.83" y="567.64" width="27.71" height="25.55" transform="translate(-7.51 6.48) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_237" data-name="Capa 237">
+    <path id="mp-_06-Mz15" data-name="06-Mz15" class="mpc-1" d="M508.71,593.01l.35,27.11-20.2.26c-4.15.05-7.55-3.23-7.6-7.34l-.26-19.68,27.71-.36Z"/>
+  </g>
+  <g id="mp-Capa_236" data-name="Capa 236">
+    <path id="mp-_05-Mz15" data-name="05-Mz15" class="mpc-1" d="M536.43,592.65l.26,19.68c.05,4.11-3.26,7.48-7.42,7.53l-20.2.26-.35-27.11,27.72-.36Z"/>
+  </g>
+  <g id="mp-Capa_235" data-name="Capa 235">
+    <rect id="mp-_04-Mz15" data-name="04-Mz15" class="mpc-1" x="508.54" y="567.28" width="27.72" height="25.55" transform="translate(-7.5 6.84) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_234" data-name="Capa 234">
+    <rect id="mp-_03-Mz15" data-name="03-Mz15" class="mpc-1" x="508.21" y="541.62" width="27.72" height="25.66" transform="translate(-7.17 6.84) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_233" data-name="Capa 233">
+    <rect id="mp-_02-Mz15" data-name="02-Mz15" class="mpc-1" x="507.87" y="515.8" width="27.72" height="25.82" transform="translate(-6.83 6.83) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_232" data-name="Capa 232">
+    <path id="mp-_01-Mz15" data-name="01-Mz15" class="mpc-1" d="M535.16,495.27l.26,20.35-27.72.36-.36-27.79,20.2-.26c4.15-.05,7.56,3.23,7.61,7.34Z"/>
+  </g>
+  <g id="mp-Capa_231" data-name="Capa 231">
+    <path id="mp-_10-Mz16" data-name="10-Mz16" class="mpc-1" d="M443.46,489.03l.36,27.79-27.71.36-.26-20.35c-.05-4.11,3.26-7.48,7.41-7.53l20.2-.26Z"/>
+  </g>
+  <g id="mp-Capa_230" data-name="Capa 230">
+    <rect id="mp-_09-Mz16" data-name="09-Mz16" class="mpc-1" x="416.27" y="516.99" width="27.71" height="25.82" transform="translate(-6.85 5.64) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_229" data-name="Capa 229">
+    <rect id="mp-_08-Mz16" data-name="08-Mz16" class="mpc-1" x="416.61" y="542.81" width="27.71" height="25.66" transform="translate(-7.19 5.64) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_228" data-name="Capa 228">
+    <rect id="mp-_07-Mz16" data-name="07-Mz16" class="mpc-1" x="416.94" y="568.48" width="27.71" height="25.55" transform="translate(-7.52 5.65) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_227" data-name="Capa 227">
+    <path id="mp-_06-Mz16" data-name="06-Mz16" class="mpc-1" d="M444.82,593.84l.35,27.11-20.2.26c-4.15.05-7.55-3.23-7.6-7.34l-.26-19.68,27.71-.36Z"/>
+  </g>
+  <g id="mp-Capa_226" data-name="Capa 226">
+    <path id="mp-_05-Mz16" data-name="05-Mz16" class="mpc-1" d="M472.54,593.48l.26,19.68c.05,4.11-3.26,7.48-7.42,7.53l-20.2.26-.35-27.11,27.72-.36Z"/>
+  </g>
+  <g id="mp-Capa_225" data-name="Capa 225">
+    <rect id="mp-_04-Mz16" data-name="04-Mz16" class="mpc-1" x="444.65" y="568.12" width="27.72" height="25.55" transform="translate(-7.51 6.01) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_224" data-name="Capa 224">
+    <rect id="mp-_03-Mz16" data-name="03-Mz16" class="mpc-1" x="444.32" y="542.45" width="27.72" height="25.66" transform="translate(-7.18 6) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_223" data-name="Capa 223">
+    <rect id="mp-_02-Mz16" data-name="02-Mz16" class="mpc-1" x="443.98" y="516.63" width="27.72" height="25.82" transform="translate(-6.85 6) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_222" data-name="Capa 222">
+    <path id="mp-_01-Mz16" data-name="01-Mz16" class="mpc-1" d="M471.27,496.1l.26,20.35-27.72.36-.36-27.79,20.2-.26c4.15-.05,7.56,3.23,7.61,7.34Z"/>
+  </g>
+  <g id="mp-Capa_221" data-name="Capa 221">
+    <path id="mp-_10-Mz17" data-name="10-Mz17" class="mpc-1" d="M379.81,489.85l.36,27.79-27.71.36-.26-20.35c-.05-4.11,3.26-7.48,7.41-7.53l20.2-.26Z"/>
+  </g>
+  <g id="mp-Capa_220" data-name="Capa 220">
+    <rect id="mp-_09-Mz17" data-name="09-Mz17" class="mpc-1" x="352.62" y="517.82" width="27.71" height="25.82" transform="translate(-6.87 4.81) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_219" data-name="Capa 219">
+    <rect id="mp-_08-Mz17" data-name="08-Mz17" class="mpc-1" x="352.96" y="543.64" width="27.71" height="25.66" transform="translate(-7.2 4.82) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_218" data-name="Capa 218">
+    <rect id="mp-_07-Mz17" data-name="07-Mz17" class="mpc-1" x="353.29" y="569.3" width="27.71" height="25.55" transform="translate(-7.54 4.82) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_217" data-name="Capa 217">
+    <path id="mp-_06-Mz17" data-name="06-Mz17" class="mpc-1" d="M381.17,594.67l.35,27.11-20.2.26c-4.15.05-7.55-3.23-7.6-7.34l-.26-19.68,27.71-.36Z"/>
+  </g>
+  <g id="mp-Capa_216" data-name="Capa 216">
+    <path id="mp-_05-Mz17" data-name="05-Mz17" class="mpc-1" d="M408.89,594.31l.26,19.68c.05,4.11-3.26,7.48-7.42,7.53l-20.2.26-.35-27.11,27.72-.36Z"/>
+  </g>
+  <g id="mp-Capa_215" data-name="Capa 215">
+    <rect id="mp-_04-Mz17" data-name="04-Mz17" class="mpc-1" x="381" y="568.94" width="27.72" height="25.55" transform="translate(-7.53 5.18) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_214" data-name="Capa 214">
+    <rect id="mp-_03-Mz17" data-name="03-Mz17" class="mpc-1" x="380.67" y="543.28" width="27.72" height="25.66" transform="translate(-7.2 5.18) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_213" data-name="Capa 213">
+    <rect id="mp-_02-Mz17" data-name="02-Mz17" class="mpc-1" x="380.33" y="517.46" width="27.72" height="25.82" transform="translate(-6.86 5.17) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_212" data-name="Capa 212">
+    <path id="mp-_01-Mz17" data-name="01-Mz17" class="mpc-1" d="M407.62,496.93l.26,20.35-27.72.36-.36-27.79,20.2-.26c4.15-.05,7.56,3.23,7.61,7.34Z"/>
+  </g>
+  <g id="mp-Capa_211" data-name="Capa 211">
+    <path id="mp-_10-Mz18" data-name="10-Mz18" class="mpc-1" d="M315.23,490.63l.36,27.79-27.71.36-.26-20.35c-.05-4.11,3.26-7.48,7.41-7.53l20.2-.26Z"/>
+  </g>
+  <g id="mp-Capa_210" data-name="Capa 210">
+    <rect id="mp-_09-Mz18" data-name="09-Mz18" class="mpc-1" x="288.04" y="518.6" width="27.71" height="25.82" transform="translate(-6.89 3.97) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_209" data-name="Capa 209">
+    <rect id="mp-_08-Mz18" data-name="08-Mz18" class="mpc-1" x="288.38" y="544.42" width="27.71" height="25.66" transform="translate(-7.22 3.98) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_208" data-name="Capa 208">
+    <rect id="mp-_07-Mz18" data-name="07-Mz18" class="mpc-1" x="288.71" y="570.08" width="27.71" height="25.55" transform="translate(-7.55 3.98) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_207" data-name="Capa 207">
+    <path id="mp-_06-Mz18" data-name="06-Mz18" class="mpc-1" d="M316.59,595.45l.35,27.11-20.2.26c-4.15.05-7.55-3.23-7.6-7.34l-.26-19.68,27.71-.36Z"/>
+  </g>
+  <g id="mp-Capa_206" data-name="Capa 206">
+    <path id="mp-_05-Mz18" data-name="05-Mz18" class="mpc-1" d="M344.31,595.09l.26,19.68c.05,4.11-3.26,7.48-7.42,7.53l-20.2.26-.35-27.11,27.72-.36Z"/>
+  </g>
+  <g id="mp-Capa_205" data-name="Capa 205">
+    <rect id="mp-_04-Mz18" data-name="04-Mz18" class="mpc-1" x="316.42" y="569.72" width="27.72" height="25.55" transform="translate(-7.55 4.34) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_204" data-name="Capa 204">
+    <rect id="mp-_03-Mz18" data-name="03-Mz18" class="mpc-1" x="316.09" y="544.06" width="27.72" height="25.66" transform="translate(-7.21 4.34) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_203" data-name="Capa 203">
+    <rect id="mp-_02-Mz18" data-name="02-Mz18" class="mpc-1" x="315.75" y="518.24" width="27.72" height="25.82" transform="translate(-6.88 4.33) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_202" data-name="Capa 202">
+    <path id="mp-_01-Mz18" data-name="01-Mz18" class="mpc-1" d="M343.04,497.71l.26,20.35-27.72.36-.36-27.79,20.2-.26c4.15-.05,7.56,3.23,7.61,7.34Z"/>
+  </g>
+  <g id="mp-Capa_201" data-name="Capa 201">
+    <path id="mp-_10-Mz19" data-name="10-Mz19" class="mpc-1" d="M250.4,491.46l.36,27.79-27.71.36-.26-20.35c-.05-4.11,3.26-7.48,7.41-7.53l20.2-.26Z"/>
+  </g>
+  <g id="mp-Capa_200" data-name="Capa 200">
+    <rect id="mp-_09-Mz19" data-name="09-Mz19" class="mpc-1" x="223.21" y="519.43" width="27.71" height="25.82" transform="translate(-6.9 3.13) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_199" data-name="Capa 199">
+    <rect id="mp-_08-Mz19" data-name="08-Mz19" class="mpc-1" x="223.55" y="545.25" width="27.71" height="25.66" transform="translate(-7.24 3.13) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_198" data-name="Capa 198">
+    <rect id="mp-_07-Mz19" data-name="07-Mz19" class="mpc-1" x="223.88" y="570.91" width="27.71" height="25.55" transform="translate(-7.57 3.14) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_197" data-name="Capa 197">
+    <path id="mp-_06-Mz19" data-name="06-Mz19" class="mpc-1" d="M251.76,596.28l.35,27.11-20.2.26c-4.15.05-7.55-3.23-7.6-7.34l-.26-19.68,27.71-.36Z"/>
+  </g>
+  <g id="mp-Capa_196" data-name="Capa 196">
+    <path id="mp-_05-Mz19" data-name="05-Mz19" class="mpc-1" d="M279.48,595.92l.26,19.68c.05,4.11-3.26,7.48-7.42,7.53l-20.2.26-.35-27.11,27.72-.36Z"/>
+  </g>
+  <g id="mp-Capa_195" data-name="Capa 195">
+    <rect id="mp-_04-Mz19" data-name="04-Mz19" class="mpc-1" x="251.59" y="570.55" width="27.72" height="25.55" transform="translate(-7.56 3.5) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_194" data-name="Capa 194">
+    <rect id="mp-_03-Mz19" data-name="03-Mz19" class="mpc-1" x="251.26" y="544.89" width="27.72" height="25.66" transform="translate(-7.23 3.49) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_193" data-name="Capa 193">
+    <rect id="mp-_02-Mz19" data-name="02-Mz19" class="mpc-1" x="250.92" y="519.07" width="27.72" height="25.82" transform="translate(-6.89 3.49) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_192" data-name="Capa 192">
+    <path id="mp-_01-Mz19" data-name="01-Mz19" class="mpc-1" d="M278.21,498.54l.26,20.35-27.72.36-.36-27.79,20.2-.26c4.15-.05,7.56,3.23,7.61,7.34Z"/>
+  </g>
+  <g id="mp-Capa_191" data-name="Capa 191">
+    <path id="mp-_10-Mz20" data-name="10-Mz20" class="mpc-1" d="M186.39,493.3l.36,27.79-27.71.36-.26-20.35c-.05-4.11,3.26-7.48,7.41-7.53l20.2-.26Z"/>
+  </g>
+  <g id="mp-Capa_190" data-name="Capa 190">
+    <rect id="mp-_09-Mz20" data-name="09-Mz20" class="mpc-1" x="159.21" y="521.26" width="27.71" height="25.82" transform="translate(-6.93 2.3) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_189" data-name="Capa 189">
+    <rect id="mp-_08-Mz20" data-name="08-Mz20" class="mpc-1" x="159.54" y="547.08" width="27.71" height="25.66" transform="translate(-7.27 2.3) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_188" data-name="Capa 188">
+    <rect id="mp-_07-Mz20" data-name="07-Mz20" class="mpc-1" x="159.87" y="572.75" width="27.71" height="25.55" transform="translate(-7.6 2.31) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_187" data-name="Capa 187">
+    <path id="mp-_06-Mz20" data-name="06-Mz20" class="mpc-1" d="M187.75,598.11l.35,27.11-20.2.26c-4.15.05-7.55-3.23-7.6-7.34l-.26-19.68,27.71-.36Z"/>
+  </g>
+  <g id="mp-Capa_186" data-name="Capa 186">
+    <path id="mp-_05-Mz20" data-name="05-Mz20" class="mpc-1" d="M215.47,597.75l.26,19.68c.05,4.11-3.26,7.48-7.42,7.53l-20.2.26-.35-27.11,27.72-.36Z"/>
+  </g>
+  <g id="mp-Capa_185" data-name="Capa 185">
+    <rect id="mp-_04-Mz20" data-name="04-Mz20" class="mpc-1" x="187.58" y="572.38" width="27.72" height="25.55" transform="translate(-7.59 2.67) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_184" data-name="Capa 184">
+    <rect id="mp-_03-Mz20" data-name="03-Mz20" class="mpc-1" x="187.25" y="546.72" width="27.72" height="25.66" transform="translate(-7.26 2.66) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_183" data-name="Capa 183">
+    <rect id="mp-_02-Mz20" data-name="02-Mz20" class="mpc-1" x="186.92" y="520.9" width="27.72" height="25.82" transform="translate(-6.92 2.66) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_182" data-name="Capa 182">
+    <path id="mp-_01-Mz20" data-name="01-Mz20" class="mpc-1" d="M214.2,500.37l.26,20.35-27.72.36-.36-27.79,20.2-.26c4.15-.05,7.56,3.23,7.61,7.34Z"/>
+  </g>
+  <g id="mp-Capa_181" data-name="Capa 181">
+    <path id="mp-_10-Mz21" data-name="10-Mz21" class="mpc-1" d="M123.27,494.12l.36,27.79-27.71.36-.26-20.35c-.05-4.11,3.26-7.48,7.41-7.53l20.2-.26Z"/>
+  </g>
+  <g id="mp-Capa_180" data-name="Capa 180">
+    <rect id="mp-_09-Mz21" data-name="09-Mz21" class="mpc-1" x="96.09" y="522.08" width="27.71" height="25.82" transform="translate(-6.95 1.47) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_179" data-name="Capa 179">
+    <rect id="mp-_08-Mz21" data-name="08-Mz21" class="mpc-1" x="96.43" y="547.9" width="27.71" height="25.66" transform="translate(-7.28 1.48) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_178" data-name="Capa 178">
+    <rect id="mp-_07-Mz21" data-name="07-Mz21" class="mpc-1" x="96.76" y="573.57" width="27.71" height="25.55" transform="translate(-7.61 1.49) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_177" data-name="Capa 177">
+    <path id="mp-_06-Mz21" data-name="06-Mz21" class="mpc-1" d="M124.64,598.93l.35,27.11-20.2.26c-4.15.05-7.55-3.23-7.6-7.34l-.26-19.68,27.71-.36Z"/>
+  </g>
+  <g id="mp-Capa_176" data-name="Capa 176">
+    <path id="mp-_05-Mz21" data-name="05-Mz21" class="mpc-1" d="M152.35,598.57l.26,19.68c.05,4.11-3.26,7.48-7.42,7.53l-20.2.26-.35-27.11,27.72-.36Z"/>
+  </g>
+  <g id="mp-Capa_175" data-name="Capa 175">
+    <rect id="mp-_04-Mz21" data-name="04-Mz21" class="mpc-1" x="124.47" y="573.21" width="27.72" height="25.55" transform="translate(-7.61 1.85) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_174" data-name="Capa 174">
+    <rect id="mp-_03-Mz21" data-name="03-Mz21" class="mpc-1" x="124.14" y="547.54" width="27.72" height="25.66" transform="translate(-7.27 1.84) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_173" data-name="Capa 173">
+    <rect id="mp-_02-Mz21" data-name="02-Mz21" class="mpc-1" x="123.8" y="521.72" width="27.72" height="25.82" transform="translate(-6.94 1.84) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_172" data-name="Capa 172">
+    <path id="mp-_01-Mz21" data-name="01-Mz21" class="mpc-1" d="M151.09,501.19l.26,20.35-27.72.36-.36-27.79,20.2-.26c4.15-.05,7.56,3.23,7.61,7.34Z"/>
+  </g>
+  <g id="mp-Capa_171" data-name="Capa 171">
+    <rect id="mp-_01-Mz22" data-name="01-Mz22" class="mpc-1" x="121.27" y="404.8" width="27.72" height="26.21" transform="translate(-5.42 1.79) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_170" data-name="Capa 170">
+    <rect id="mp-_02-Mz22" data-name="02-Mz22" class="mpc-1" x="121.61" y="431.01" width="27.72" height="25.51" transform="translate(-5.76 1.8) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_169" data-name="Capa 169">
+    <path id="mp-_03-Mz22" data-name="03-Mz22" class="mpc-1" d="M149.49,456.34l.25,19.41c.06,4.54-3.6,8.25-8.18,8.31l-19.43.25-.36-27.61,27.72-.36Z"/>
+  </g>
+  <g id="mp-Capa_168" data-name="Capa 168">
+    <path id="mp-_04-Mz22" data-name="04-Mz22" class="mpc-1" d="M121.77,456.7l.36,27.61-19.43.25c-4.57.06-8.33-3.56-8.39-8.1l-.25-19.41,27.71-.36Z"/>
+  </g>
+  <g id="mp-Capa_167" data-name="Capa 167">
+    <rect id="mp-_05-Mz22" data-name="05-Mz22" class="mpc-1" x="93.9" y="431.37" width="27.71" height="25.51" transform="translate(-5.77 1.44) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_166" data-name="Capa 166">
+    <rect id="mp-_06-Mz22" data-name="06-Mz22" class="mpc-1" x="93.56" y="405.16" width="27.71" height="26.21" transform="translate(-5.43 1.43) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_165" data-name="Capa 165">
+    <path id="mp-espacio_verde" data-name="espacio verde" class="mpc-1" d="M148.23,359.34l.59,45.28-55.43.72c0-.34.02-.86.11-1.5,1.27-8.72,12.56-10.43,23.56-22.66,2.02-2.24,3.48-4.24,4.38-5.53,1.55-2.23,7.56-10.55,8.5-17.28.05-.38.24-1.55.98-2.86,1.41-2.51,4.07-4.19,7.12-4.23l1.79-.02c4.57-.06,8.33,3.57,8.39,8.1Z"/>
+  </g>
+  <g id="mp-Capa_164" data-name="Capa 164">
+    <path id="mp-_08-Mz23" data-name="08-Mz23" class="mpc-1" d="M53.65,172.38l.37,28.33-28.04.36-.28-21.16c-.05-3.96,3.15-7.21,7.15-7.27l20.8-.27Z"/>
+  </g>
+  <g id="mp-Capa_163" data-name="Capa 163">
+    <rect id="mp-_07-Mz23" data-name="07-Mz23" class="mpc-1" x="26.14" y="200.89" width="28.04" height="25.06" transform="translate(-2.77 .54) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_162" data-name="Capa 162">
+    <rect id="mp-_06-Mz23" data-name="06-Mz23" class="mpc-1" x="26.48" y="225.95" width="28.04" height="26.48" transform="translate(-3.11 .55) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_161" data-name="Capa 161">
+    <path id="mp-_05-Mz23" data-name="05-Mz23" class="mpc-1" d="M54.69,252.24l.36,27.33-20.8.27c-4,.05-7.28-3.12-7.33-7.08l-.26-20.16,28.04-.36Z"/>
+  </g>
+  <g id="mp-Capa_160" data-name="Capa 160">
+    <path id="mp-_04-Mz23" data-name="04-Mz23" class="mpc-1" d="M82.73,251.88l.26,20.16c.05,3.96-3.15,7.21-7.15,7.27l-20.8.27-.36-27.33,28.04-.36Z"/>
+  </g>
+  <g id="mp-Capa_159" data-name="Capa 159">
+    <rect id="mp-_03-Mz23" data-name="03-Mz23" class="mpc-1" x="54.52" y="225.59" width="28.04" height="26.48" transform="translate(-3.1 .91) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_158" data-name="Capa 158">
+    <rect id="mp-_02-Mz23" data-name="02-Mz23" class="mpc-1" x="54.18" y="200.53" width="28.04" height="25.06" transform="translate(-2.76 .9) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_157" data-name="Capa 157">
+    <path id="mp-_01-Mz23" data-name="01-Mz23" class="mpc-1" d="M81.78,179.19l.28,21.16-28.04.36-.37-28.33,20.8-.27c4-.05,7.28,3.12,7.33,7.08Z"/>
+  </g>
+  <g id="mp-Capa_156" data-name="Capa 156">
+    <path id="mp-_12-Mz24" data-name="12-Mz24" class="mpc-1" d="M119.01,172.26l.36,27.63-27.92.36-.28-21.87c-.04-3.18,2.52-5.79,5.73-5.83l22.11-.29Z"/>
+  </g>
+  <g id="mp-Capa_155" data-name="Capa 155">
+    <rect id="mp-_11-Mz24" data-name="11-Mz24" class="mpc-1" x="91.62" y="200.07" width="27.92" height="25.27" transform="translate(-2.76 1.39) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_154" data-name="Capa 154">
+    <rect id="mp-_10-Mz24" data-name="10-Mz24" class="mpc-1" x="91.95" y="225.34" width="27.92" height="26.27" transform="translate(-3.09 1.4) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_153" data-name="Capa 153">
+    <rect id="mp-_09-Mz24" data-name="09-Mz24" class="mpc-1" x="92.29" y="251.6" width="27.92" height="25.5" transform="translate(-3.43 1.4) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_152" data-name="Capa 152">
+    <path id="mp-espacio_verde-2" data-name="espacio verde" class="mpc-1" d="M147.11,276.57l.62,47.37c.04,3.17-2.52,5.79-5.72,5.83-1.44.02-2.55.18-3.4.04-3.92-.63-6.66-3.29-8.13-4.94-5.1-5.72-3.82-9.97-7.97-17.74-3.23-6.05-7.4-9.84-9.96-12.17-3.52-3.2-11.73-9.77-15.15-11.96-.38-.24-1.62-1.02-2.98-2.38-.9-.91-1.54-1.75-1.91-2.3-.02-.35-.04-.7-.05-1.05l54.65-.71Z"/>
+  </g>
+  <g id="mp-Capa_151" data-name="Capa 151">
+    <rect id="mp-_04-Mz24" data-name="04-Mz24" class="mpc-1" x="120.21" y="251.25" width="26.73" height="25.5" transform="translate(-3.42 1.76) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_150" data-name="Capa 150">
+    <rect id="mp-_03-Mz24" data-name="03-Mz24" class="mpc-1" x="119.87" y="224.98" width="26.73" height="26.27" transform="translate(-3.08 1.75) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_149" data-name="Capa 149">
+    <rect id="mp-_02-Mz24" data-name="02-Mz24" class="mpc-1" x="119.54" y="199.71" width="26.73" height="25.27" transform="translate(-2.75 1.75) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_148" data-name="Capa 148">
+    <path id="mp-_01-Mz24" data-name="01-Mz24" class="mpc-1" d="M145.82,177.67l.28,21.87-26.73.35-.36-27.63,20.92-.27c3.21-.04,5.85,2.5,5.89,5.68Z"/>
+  </g>
+  <g id="mp-Capa_147" data-name="Capa 147">
+    <path id="mp-_12-Mz25" data-name="12-Mz25" class="mpc-1" d="M182.84,171.43l.36,27.63-28.52.37-.27-21.07c-.05-3.62,2.88-6.59,6.53-6.64l21.9-.28Z"/>
+  </g>
+  <g id="mp-Capa_146" data-name="Capa 146">
+    <rect id="mp-_11-Mz25" data-name="11-Mz25" class="mpc-1" x="154.85" y="199.24" width="28.52" height="25.27" transform="translate(-2.74 2.22) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_145" data-name="Capa 145">
+    <rect id="mp-_10-Mz25" data-name="10-Mz25" class="mpc-1" x="155.18" y="224.51" width="28.52" height="26.03" transform="translate(-3.07 2.22) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_144" data-name="Capa 144">
+    <rect id="mp-_09-Mz25" data-name="09-Mz25" class="mpc-1" x="155.52" y="250.54" width="28.52" height="25.73" transform="translate(-3.41 2.23) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_143" data-name="Capa 143">
+    <rect id="mp-_08-Mz25" data-name="08-Mz25" class="mpc-1" x="155.85" y="276.27" width="28.52" height="26.14" transform="translate(-3.75 2.24) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_142" data-name="Capa 142">
+    <path id="mp-_07-Mz25" data-name="07-Mz25" class="mpc-1" d="M184.54,302.22l.36,27.82-21.9.28c-3.66.05-6.66-2.85-6.7-6.47l-.28-21.27,28.52-.37Z"/>
+  </g>
+  <g id="mp-Capa_141" data-name="Capa 141">
+    <path id="mp-_06-Mz25" data-name="06-Mz25" class="mpc-1" d="M211.81,301.87l.28,21.27c.05,3.62-2.88,6.59-6.53,6.64l-20.66.27-.36-27.82,27.27-.35Z"/>
+  </g>
+  <g id="mp-Capa_140" data-name="Capa 140">
+    <rect id="mp-_05-Mz25" data-name="05-Mz25" class="mpc-1" x="184.37" y="275.91" width="27.27" height="26.14" transform="translate(-3.74 2.6) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_139" data-name="Capa 139">
+    <rect id="mp-_04-Mz25" data-name="04-Mz25" class="mpc-1" x="184.03" y="250.18" width="27.27" height="25.73" transform="translate(-3.4 2.59) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_138" data-name="Capa 138">
+    <rect id="mp-_03-Mz25" data-name="03-Mz25" class="mpc-1" x="183.69" y="224.15" width="27.27" height="26.03" transform="translate(-3.07 2.59) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_137" data-name="Capa 137">
+    <rect id="mp-_02-Mz25" data-name="02-Mz25" class="mpc-1" x="183.36" y="198.88" width="27.27" height="25.27" transform="translate(-2.73 2.58) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_136" data-name="Capa 136">
+    <path id="mp-_01-Mz25" data-name="01-Mz25" class="mpc-1" d="M210.19,177.63l.27,21.07-27.27.35-.36-27.63,20.66-.27c3.65-.05,6.65,2.85,6.7,6.47Z"/>
+  </g>
+  <g id="mp-Capa_135" data-name="Capa 135">
+    <path id="mp-_12-Mz26" data-name="12-Mz26" class="mpc-1" d="M246.97,170.6l.36,27.63-28.52.37-.27-21.07c-.05-3.62,2.88-6.59,6.53-6.64l21.9-.28Z"/>
+  </g>
+  <g id="mp-Capa_134" data-name="Capa 134">
+    <rect id="mp-_11-Mz26" data-name="11-Mz26" class="mpc-1" x="218.97" y="198.41" width="28.52" height="25.27" transform="translate(-2.72 3.05) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_133" data-name="Capa 133">
+    <rect id="mp-_10-Mz26" data-name="10-Mz26" class="mpc-1" x="219.31" y="223.68" width="28.52" height="26.03" transform="translate(-3.06 3.06) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_132" data-name="Capa 132">
+    <rect id="mp-_09-Mz26" data-name="09-Mz26" class="mpc-1" x="219.64" y="249.71" width="28.52" height="25.73" transform="translate(-3.39 3.06) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_131" data-name="Capa 131">
+    <rect id="mp-_08-Mz26" data-name="08-Mz26" class="mpc-1" x="219.98" y="275.44" width="28.52" height="26.14" transform="translate(-3.73 3.07) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_130" data-name="Capa 130">
+    <path id="mp-_07-Mz26" data-name="07-Mz26" class="mpc-1" d="M248.67,301.39l.36,27.82-21.9.28c-3.66.05-6.66-2.85-6.7-6.47l-.28-21.27,28.52-.37Z"/>
+  </g>
+  <g id="mp-Capa_129" data-name="Capa 129">
+    <path id="mp-_06-Mz26" data-name="06-Mz26" class="mpc-1" d="M275.94,301.03l.28,21.27c.05,3.62-2.88,6.59-6.53,6.64l-20.66.27-.36-27.82,27.27-.35Z"/>
+  </g>
+  <g id="mp-Capa_128" data-name="Capa 128">
+    <rect id="mp-_05-Mz26" data-name="05-Mz26" class="mpc-1" x="248.5" y="275.07" width="27.27" height="26.14" transform="translate(-3.72 3.43) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_127" data-name="Capa 127">
+    <rect id="mp-_04-Mz26" data-name="04-Mz26" class="mpc-1" x="248.16" y="249.34" width="27.27" height="25.73" transform="translate(-3.39 3.43) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_126" data-name="Capa 126">
+    <rect id="mp-_03-Mz26" data-name="03-Mz26" class="mpc-1" x="247.82" y="223.31" width="27.27" height="26.03" transform="translate(-3.05 3.42) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_125" data-name="Capa 125">
+    <rect id="mp-_02-Mz26" data-name="02-Mz26" class="mpc-1" x="247.49" y="198.05" width="27.27" height="25.27" transform="translate(-2.72 3.41) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_124" data-name="Capa 124">
+    <path id="mp-_01-Mz26" data-name="01-Mz26" class="mpc-1" d="M274.32,176.8l.27,21.07-27.27.35-.36-27.63,20.66-.27c3.65-.05,6.65,2.85,6.7,6.47Z"/>
+  </g>
+  <g id="mp-Capa_123" data-name="Capa 123">
+    <path id="mp-_12-Mz27" data-name="12-Mz27" class="mpc-1" d="M311.26,169.76l.36,27.63-28.52.37-.27-21.07c-.05-3.62,2.88-6.59,6.53-6.64l21.9-.28Z"/>
+  </g>
+  <g id="mp-Capa_122" data-name="Capa 122">
+    <rect id="mp-_11-Mz27" data-name="11-Mz27" class="mpc-1" x="283.26" y="197.57" width="28.52" height="25.27" transform="translate(-2.71 3.89) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_121" data-name="Capa 121">
+    <rect id="mp-_10-Mz27" data-name="10-Mz27" class="mpc-1" x="283.6" y="222.84" width="28.52" height="26.03" transform="translate(-3.04 3.89) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_120" data-name="Capa 120">
+    <rect id="mp-_09-Mz27" data-name="09-Mz27" class="mpc-1" x="283.93" y="248.87" width="28.52" height="25.73" transform="translate(-3.38 3.9) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_119" data-name="Capa 119">
+    <rect id="mp-_08-Mz27" data-name="08-Mz27" class="mpc-1" x="284.27" y="274.6" width="28.52" height="26.14" transform="translate(-3.72 3.91) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_118" data-name="Capa 118">
+    <path id="mp-_07-Mz27" data-name="07-Mz27" class="mpc-1" d="M312.96,300.55l.36,27.82-21.9.28c-3.66.05-6.66-2.85-6.7-6.47l-.28-21.27,28.52-.37Z"/>
+  </g>
+  <g id="mp-Capa_117" data-name="Capa 117">
+    <path id="mp-_06-Mz27" data-name="06-Mz27" class="mpc-1" d="M340.23,300.2l.28,21.27c.05,3.62-2.88,6.59-6.53,6.64l-20.66.27-.36-27.82,27.27-.35Z"/>
+  </g>
+  <g id="mp-Capa_116" data-name="Capa 116">
+    <rect id="mp-_05-Mz27" data-name="05-Mz27" class="mpc-1" x="312.79" y="274.24" width="27.27" height="26.14" transform="translate(-3.71 4.27) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_115" data-name="Capa 115">
+    <rect id="mp-_04-Mz27" data-name="04-Mz27" class="mpc-1" x="312.45" y="248.51" width="27.27" height="25.73" transform="translate(-3.37 4.26) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_114" data-name="Capa 114">
+    <rect id="mp-_03-Mz27" data-name="03-Mz27" class="mpc-1" x="312.11" y="222.48" width="27.27" height="26.03" transform="translate(-3.03 4.26) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_113" data-name="Capa 113">
+    <rect id="mp-_02-Mz27" data-name="02-Mz27" class="mpc-1" x="311.78" y="197.21" width="27.27" height="25.27" transform="translate(-2.7 4.25) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_112" data-name="Capa 112">
+    <path id="mp-_01-Mz27" data-name="01-Mz27" class="mpc-1" d="M338.61,175.96l.27,21.07-27.27.35-.36-27.63,20.66-.27c3.65-.05,6.65,2.85,6.7,6.47Z"/>
+  </g>
+  <g id="mp-Capa_111" data-name="Capa 111">
+    <path id="mp-_12-Mz28" data-name="12-Mz28" class="mpc-1" d="M375.96,168.97l.36,27.63-28.52.37-.27-21.07c-.05-3.62,2.88-6.59,6.53-6.64l21.9-.28Z"/>
+  </g>
+  <g id="mp-Capa_110" data-name="Capa 110">
+    <rect id="mp-_11-Mz28" data-name="11-Mz28" class="mpc-1" x="347.96" y="196.78" width="28.52" height="25.27" transform="translate(-2.69 4.73) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_109" data-name="Capa 109">
+    <rect id="mp-_10-Mz28" data-name="10-Mz28" class="mpc-1" x="348.3" y="222.05" width="28.52" height="26.03" transform="translate(-3.03 4.73) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_108" data-name="Capa 108">
+    <rect id="mp-_09-Mz28" data-name="09-Mz28" class="mpc-1" x="348.63" y="248.08" width="28.52" height="25.73" transform="translate(-3.36 4.74) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_107" data-name="Capa 107">
+    <rect id="mp-_08-Mz28" data-name="08-Mz28" class="mpc-1" x="348.97" y="273.81" width="28.52" height="26.14" transform="translate(-3.7 4.75) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_106" data-name="Capa 106">
+    <path id="mp-_07-Mz28" data-name="07-Mz28" class="mpc-1" d="M377.66,299.76l.36,27.82-21.9.28c-3.66.05-6.66-2.85-6.7-6.47l-.28-21.27,28.52-.37Z"/>
+  </g>
+  <g id="mp-Capa_105" data-name="Capa 105">
+    <path id="mp-_06-Mz28" data-name="06-Mz28" class="mpc-1" d="M404.93,299.41l.28,21.27c.05,3.62-2.88,6.59-6.53,6.64l-20.66.27-.36-27.82,27.27-.35Z"/>
+  </g>
+  <g id="mp-Capa_104" data-name="Capa 104">
+    <rect id="mp-_05-Mz28" data-name="05-Mz28" class="mpc-1" x="377.48" y="273.45" width="27.27" height="26.14" transform="translate(-3.69 5.11) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_103" data-name="Capa 103">
+    <rect id="mp-_04-Mz28" data-name="04-Mz28" class="mpc-1" x="377.15" y="247.72" width="27.27" height="25.73" transform="translate(-3.36 5.1) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_102" data-name="Capa 102">
+    <rect id="mp-_03-Mz28" data-name="03-Mz28" class="mpc-1" x="376.81" y="221.69" width="27.27" height="26.03" transform="translate(-3.02 5.1) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_101" data-name="Capa 101">
+    <rect id="mp-_02-Mz28" data-name="02-Mz28" class="mpc-1" x="376.48" y="196.42" width="27.27" height="25.27" transform="translate(-2.69 5.09) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_100" data-name="Capa 100">
+    <path id="mp-_01-Mz28" data-name="01-Mz28" class="mpc-1" d="M403.31,175.17l.27,21.07-27.27.35-.36-27.63,20.66-.27c3.65-.05,6.65,2.85,6.7,6.47Z"/>
+  </g>
+  <g id="mp-Capa_99" data-name="Capa 99">
+    <path id="mp-NUEVAS_AREAS_COMUNES" data-name="NUEVAS AREAS COMUNES" class="mpc-1" d="M532.77,245.89l-27.27.36-10.22.13-15.06.2c1.84-1.9,2.99-4.5,2.99-7.37,0-5.85-4.74-10.59-10.59-10.59s-10.58,4.74-10.58,10.59c0,2.96,1.22,5.65,3.19,7.56l-16.09.21-7.76.1-28.53.37-.33-26.02-.33-25.28-.27-21.07c-.05-3.62,2.88-6.58,6.53-6.63l21.9-.29,20.17-.26c.22,0,.45-.01.67-.01l20.59-.26,22.7-.3,20.65-.28c3.65-.04,6.65,2.86,6.7,6.48l.28,21.06.32,25.28.34,26.02Z"/>
+  </g>
+  <g id="mp-Capa_96" data-name="Capa 96">
+    <rect id="mp-_09-Mz29" data-name="09-Mz29" class="mpc-1" x="413.03" y="247.27" width="28.52" height="25.73" transform="translate(-3.35 5.58) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_95" data-name="Capa 95">
+    <rect id="mp-_08-Mz29" data-name="08-Mz29" class="mpc-1" x="413.37" y="273" width="28.52" height="26.14" transform="translate(-3.68 5.58) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_94" data-name="Capa 94">
+    <path id="mp-_07-Mz29" data-name="07-Mz29" class="mpc-1" d="M442.05,298.95l.36,27.82-21.9.28c-3.66.05-6.66-2.85-6.7-6.47l-.28-21.27,28.52-.37Z"/>
+  </g>
+  <g id="mp-Capa_93" data-name="Capa 93">
+    <path id="mp-_06-Mz29" data-name="06-Mz29" class="mpc-1" d="M469.32,298.6l.28,21.27c.05,3.62-2.88,6.59-6.53,6.64l-20.66.27-.36-27.82,27.27-.35Z"/>
+  </g>
+  <g id="mp-Capa_92" data-name="Capa 92">
+    <rect id="mp-_05-Mz29" data-name="05-Mz29" class="mpc-1" x="441.88" y="272.64" width="27.27" height="26.14" transform="translate(-3.68 5.95) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_91" data-name="Capa 91">
+    <rect id="mp-_04-Mz29" data-name="04-Mz29" class="mpc-1" x="441.54" y="246.91" width="27.27" height="25.73" transform="translate(-3.34 5.94) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_84" data-name="Capa 84">
+    <rect id="mp-_09-Mz30" data-name="09-Mz30" class="mpc-1" x="477.16" y="246.44" width="28.52" height="25.73" transform="translate(-3.33 6.41) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_83" data-name="Capa 83">
+    <rect id="mp-_08-Mz30" data-name="08-Mz30" class="mpc-1" x="477.49" y="272.17" width="28.52" height="26.14" transform="translate(-3.67 6.42) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_82" data-name="Capa 82">
+    <path id="mp-_07-Mz30" data-name="07-Mz30" class="mpc-1" d="M506.18,298.12l.36,27.82-21.9.28c-3.66.05-6.66-2.85-6.7-6.47l-.28-21.27,28.52-.37Z"/>
+  </g>
+  <g id="mp-Capa_81" data-name="Capa 81">
+    <path id="mp-_06-Mz30" data-name="06-Mz30" class="mpc-1" d="M533.45,297.77l.28,21.27c.05,3.62-2.88,6.59-6.53,6.64l-20.66.27-.36-27.82,27.27-.35Z"/>
+  </g>
+  <g id="mp-Capa_80" data-name="Capa 80">
+    <rect id="mp-_05-Mz30" data-name="05-Mz30" class="mpc-1" x="506.01" y="271.81" width="27.27" height="26.14" transform="translate(-3.66 6.78) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_79" data-name="Capa 79">
+    <rect id="mp-_04-Mz30" data-name="04-Mz30" class="mpc-1" x="505.67" y="246.08" width="27.27" height="25.73" transform="translate(-3.32 6.77) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_75" data-name="Capa 75">
+    <path id="mp-_12-Mz31" data-name="12-Mz31" class="mpc-1" d="M567.91,165.51l.36,27.63-28.52.37-.27-21.07c-.05-3.62,2.88-6.59,6.53-6.64l21.9-.28Z"/>
+  </g>
+  <g id="mp-Capa_74" data-name="Capa 74">
+    <rect id="mp-_11-Mz31" data-name="11-Mz31" class="mpc-1" x="539.92" y="193.32" width="28.52" height="25.27" transform="translate(-2.63 7.22) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_73" data-name="Capa 73">
+    <rect id="mp-_10-Mz31" data-name="10-Mz31" class="mpc-1" x="540.25" y="218.58" width="28.52" height="26.03" transform="translate(-2.96 7.23) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_72" data-name="Capa 72">
+    <rect id="mp-_09-Mz31" data-name="09-Mz31" class="mpc-1" x="540.59" y="244.61" width="28.52" height="25.73" transform="translate(-3.3 7.24) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_71" data-name="Capa 71">
+    <rect id="mp-_08-Mz31" data-name="08-Mz31" class="mpc-1" x="540.92" y="270.35" width="28.52" height="26.14" transform="translate(-3.64 7.24) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_70" data-name="Capa 70">
+    <path id="mp-_07-Mz31" data-name="07-Mz31" class="mpc-1" d="M569.61,296.3l.36,27.82-21.9.28c-3.66.05-6.66-2.85-6.7-6.47l-.28-21.27,28.52-.37Z"/>
+  </g>
+  <g id="mp-Capa_69" data-name="Capa 69">
+    <path id="mp-_06-Mz31" data-name="06-Mz31" class="mpc-1" d="M596.88,295.94l.28,21.27c.05,3.62-2.88,6.59-6.53,6.64l-20.66.27-.36-27.82,27.27-.35Z"/>
+  </g>
+  <g id="mp-Capa_68" data-name="Capa 68">
+    <rect id="mp-_05-Mz31" data-name="05-Mz31" class="mpc-1" x="569.44" y="269.98" width="27.27" height="26.14" transform="translate(-3.63 7.61) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_67" data-name="Capa 67">
+    <rect id="mp-_04-Mz31" data-name="04-Mz31" class="mpc-1" x="569.1" y="244.25" width="27.27" height="25.73" transform="translate(-3.29 7.6) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_66" data-name="Capa 66">
+    <rect id="mp-_03-Mz31" data-name="03-Mz31" class="mpc-1" x="568.77" y="218.22" width="27.27" height="26.03" transform="translate(-2.96 7.59) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_65" data-name="Capa 65">
+    <rect id="mp-_02-Mz31" data-name="02-Mz31" class="mpc-1" x="568.43" y="192.95" width="27.27" height="25.27" transform="translate(-2.62 7.59) rotate(-.75)"/>
+  </g>
+  <g id="mp-Capa_63" data-name="Capa 63">
+    <path id="mp-_10-Mz32" data-name="10-Mz32" class="mpc-1" d="M506.05,346.45l.17,27.49c-9.22.11-18.45.21-27.68.32l-.28-21.4c-.04-3.34,2.66-6.08,6.03-6.13l21.75-.28Z"/>
+  </g>
+  <g id="mp-Capa_62" data-name="Capa 62">
+    <path id="mp-_09-Mz32" data-name="09-Mz32" class="mpc-1" d="M506.22,373.94l.17,25.66c-9.17.11-18.34.21-27.51.31l-.33-25.65c9.23-.11,18.45-.21,27.68-.32Z"/>
+  </g>
+  <g id="mp-Capa_61" data-name="Capa 61">
+    <path id="mp-_08-Mz32" data-name="08-Mz32" class="mpc-1" d="M506.39,399.6l.16,25.66c-9.11.11-18.22.22-27.33.32l-.33-25.68c9.17-.1,18.34-.2,27.51-.31Z"/>
+  </g>
+  <g id="mp-Capa_60" data-name="Capa 60">
+    <path id="mp-_07-Mz32" data-name="07-Mz32" class="mpc-1" d="M506.55,425.26l.16,25.66c-9.05.11-18.1.21-27.16.32l-.33-25.66c9.11-.1,18.22-.21,27.33-.32Z"/>
+  </g>
+  <g id="mp-Capa_59" data-name="Capa 59">
+    <path id="mp-_06-Mz32" data-name="06-Mz32" class="mpc-1" d="M506.71,450.93l.17,27.93-20.85.27c-3.38.04-6.15-2.63-6.19-5.97l-.29-21.92c9.05-.1,18.11-.21,27.16-.32Z"/>
+  </g>
+  <g id="mp-Capa_58" data-name="Capa 58">
+    <path id="mp-_05-Mz32" data-name="05-Mz32" class="mpc-1" d="M534.33,450.61l.28,21.84c.04,3.34-2.66,6.08-6.03,6.13l-21.69.28-.17-27.93c9.21-.1,18.42-.21,27.62-.32Z"/>
+  </g>
+  <g id="mp-Capa_57" data-name="Capa 57">
+    <path id="mp-_04-Mz32" data-name="04-Mz32" class="mpc-1" d="M533.99,424.94l.33,25.66c-9.2.11-18.41.22-27.62.32l-.16-25.66c9.15-.1,18.3-.21,27.44-.32Z"/>
+  </g>
+  <g id="mp-Capa_56" data-name="Capa 56">
+    <path id="mp-_03-Mz32" data-name="03-Mz32" class="mpc-1" d="M533.66,399.28l.33,25.66c-9.15.11-18.29.22-27.44.32l-.16-25.66c9.09-.1,18.18-.21,27.27-.31Z"/>
+  </g>
+  <g id="mp-Capa_55" data-name="Capa 55">
+    <path id="mp-_02-Mz32" data-name="02-Mz32" class="mpc-1" d="M533.32,373.62l.33,25.66c-9.09.1-18.18.21-27.27.31l-.17-25.66c9.03-.1,18.07-.21,27.1-.32Z"/>
+  </g>
+  <g id="mp-Capa_54" data-name="Capa 54">
+    <path id="mp-_01-Mz32" data-name="01-Mz32" class="mpc-1" d="M533.04,352.15l.28,21.47c-9.03.1-18.07.21-27.1.32l-.17-27.49,20.8-.27c3.38-.04,6.15,2.63,6.19,5.97Z"/>
+  </g>
+  <g id="mp-Capa_53" data-name="Capa 53">
+    <path id="mp-_10-Mz33" data-name="10-Mz33" class="mpc-1" d="M442.75,347.27l.17,27.49c-9.22.11-18.45.21-27.68.32l-.28-21.4c-.04-3.34,2.66-6.08,6.03-6.13l21.75-.28Z"/>
+  </g>
+  <g id="mp-Capa_52" data-name="Capa 52">
+    <path id="mp-_09-Mz33" data-name="09-Mz33" class="mpc-1" d="M442.91,374.76l.17,25.66c-9.17.11-18.34.21-27.51.31l-.33-25.65c9.23-.11,18.45-.21,27.68-.32Z"/>
+  </g>
+  <g id="mp-Capa_51" data-name="Capa 51">
+    <path id="mp-_08-Mz33" data-name="08-Mz33" class="mpc-1" d="M443.08,400.42l.16,25.66c-9.11.11-18.22.22-27.33.32l-.33-25.68c9.17-.1,18.34-.2,27.51-.31Z"/>
+  </g>
+  <g id="mp-Capa_50" data-name="Capa 50">
+    <path id="mp-_07-Mz33" data-name="07-Mz33" class="mpc-1" d="M443.24,426.08l.16,25.66c-9.05.11-18.1.21-27.16.32l-.33-25.66c9.11-.1,18.22-.21,27.33-.32Z"/>
+  </g>
+  <g id="mp-Capa_49" data-name="Capa 49">
+    <path id="mp-_06-Mz33" data-name="06-Mz33" class="mpc-1" d="M443.4,451.75l.17,27.93-20.85.27c-3.38.04-6.15-2.63-6.19-5.97l-.29-21.92c9.05-.1,18.11-.21,27.16-.32Z"/>
+  </g>
+  <g id="mp-Capa_48" data-name="Capa 48">
+    <path id="mp-_05-Mz33" data-name="05-Mz33" class="mpc-1" d="M471.02,451.43l.28,21.84c.04,3.34-2.66,6.08-6.03,6.13l-21.69.28-.17-27.93c9.21-.1,18.42-.21,27.62-.32Z"/>
+  </g>
+  <g id="mp-Capa_47" data-name="Capa 47">
+    <path id="mp-_04-Mz33" data-name="04-Mz33" class="mpc-1" d="M470.68,425.77l.33,25.66c-9.2.11-18.41.22-27.62.32l-.16-25.66c9.15-.1,18.3-.21,27.44-.32Z"/>
+  </g>
+  <g id="mp-Capa_46" data-name="Capa 46">
+    <path id="mp-_03-Mz33" data-name="03-Mz33" class="mpc-1" d="M470.35,400.11l.33,25.66c-9.15.11-18.29.22-27.44.32l-.16-25.66c9.09-.1,18.18-.21,27.27-.31Z"/>
+  </g>
+  <g id="mp-Capa_45" data-name="Capa 45">
+    <path id="mp-_02-Mz33" data-name="02-Mz33" class="mpc-1" d="M470.02,374.44l.33,25.66c-9.09.1-18.18.21-27.27.31l-.17-25.66c9.03-.1,18.07-.21,27.1-.32Z"/>
+  </g>
+  <g id="mp-Capa_44" data-name="Capa 44">
+    <path id="mp-_01-Mz33" data-name="01-Mz33" class="mpc-1" d="M469.74,352.97l.28,21.47c-9.03.1-18.07.21-27.1.32l-.17-27.49,20.8-.27c3.38-.04,6.15,2.63,6.19,5.97Z"/>
+  </g>
+  <g id="mp-Capa_43" data-name="Capa 43">
+    <path id="mp-_10-Mz34" data-name="10-Mz34" class="mpc-1" d="M378.1,348.09l.17,27.49c-9.22.11-18.45.21-27.68.32l-.28-21.4c-.04-3.34,2.66-6.08,6.03-6.13l21.75-.28Z"/>
+  </g>
+  <g id="mp-Capa_42" data-name="Capa 42">
+    <path id="mp-_09-Mz34" data-name="09-Mz34" class="mpc-1" d="M378.27,375.58l.17,25.66c-9.17.11-18.34.21-27.51.31l-.33-25.65c9.23-.11,18.45-.21,27.68-.32Z"/>
+  </g>
+  <g id="mp-Capa_41" data-name="Capa 41">
+    <path id="mp-_08-Mz34" data-name="08-Mz34" class="mpc-1" d="M378.43,401.24l.16,25.66c-9.11.11-18.22.22-27.33.32l-.33-25.68c9.17-.1,18.34-.2,27.51-.31Z"/>
+  </g>
+  <g id="mp-Capa_36" data-name="Capa 36">
+    <path id="mp-_03-Mz34" data-name="03-Mz34" class="mpc-1" d="M405.7,400.93l.33,25.66c-9.15.11-18.29.22-27.44.32l-.16-25.66c9.09-.1,18.18-.21,27.27-.31Z"/>
+  </g>
+  <g id="mp-Capa_35" data-name="Capa 35">
+    <path id="mp-_02-Mz34" data-name="02-Mz34" class="mpc-1" d="M405.37,375.27l.33,25.66c-9.09.1-18.18.21-27.27.31l-.17-25.66c9.03-.1,18.07-.21,27.1-.32Z"/>
+  </g>
+  <g id="mp-Capa_34" data-name="Capa 34">
+    <path id="mp-_01-Mz34" data-name="01-Mz34" class="mpc-1" d="M405.09,353.79l.28,21.47c-9.03.1-18.07.21-27.1.32l-.17-27.49,20.8-.27c3.38-.04,6.15,2.63,6.19,5.97Z"/>
+  </g>
+  <g id="mp-Capa_33" data-name="Capa 33">
+    <path id="mp-_10-Mz35" data-name="10-Mz35" class="mpc-1" d="M314.45,348.92l.17,27.49c-9.22.11-18.45.21-27.68.32l-.28-21.4c-.04-3.34,2.66-6.08,6.03-6.13l21.75-.28Z"/>
+  </g>
+  <g id="mp-Capa_32" data-name="Capa 32">
+    <path id="mp-_09-Mz35" data-name="09-Mz35" class="mpc-1" d="M314.62,376.41l.17,25.66c-9.17.11-18.34.21-27.51.31l-.33-25.65c9.23-.11,18.45-.21,27.68-.32Z"/>
+  </g>
+  <g id="mp-Capa_31" data-name="Capa 31">
+    <path id="mp-_08-Mz35" data-name="08-Mz35" class="mpc-1" d="M314.78,402.07l.16,25.66c-9.11.11-18.22.22-27.33.32l-.33-25.68c9.17-.1,18.34-.2,27.51-.31Z"/>
+  </g>
+  <g id="mp-Capa_30" data-name="Capa 30">
+    <path id="mp-NUEVAS_AREAS_COMUNES-2" data-name="NUEVAS AREAS COMUNES" class="mpc-1" d="M406.65,474.09c.04,3.34-4.68,6.11-10.55,6.19l-37.73.49-15.68.2-4.38.06-23.04.3-15.63.2c-6.26.08-11.37-2.56-11.42-5.9l-.28-21.92-.34-25.66c14.72-.17,29.43-.36,44.14-.54v-.03c3.16-.04,6.31-.08,9.47-.12-2.68,1.81-4.44,4.88-4.44,8.36,0,5.58,4.52,10.1,10.1,10.1s10.1-4.52,10.1-10.1c0-3.57-1.85-6.7-4.64-8.49,8.75-.11,17.5-.22,26.26-.33v.02c-6.76.09-13.52.17-20.28.25v.02c6.76-.08,13.52-.16,20.28-.25v-.02c9.15-.11,18.29-.22,27.44-.33l.34,25.66.28,21.84Z"/>
+  </g>
+  <g id="mp-Capa_64" data-name="Capa 64">
+    <path id="mp-_01-Mz31" data-name="01-Mz31" class="mpc-1" d="M595.26,171.71l.27,21.07-27.27.35-.36-27.63,20.66-.27c3.65-.05,6.65,2.85,6.7,6.47Z"/>
+  </g>
+  <g id="mp-Capa_26" data-name="Capa 26">
+    <path id="mp-_03-Mz35" data-name="03-Mz35" class="mpc-1" d="M342.05,401.76l.33,25.66c-9.15.11-18.29.22-27.44.32l-.16-25.66c9.09-.1,18.18-.21,27.27-.31Z"/>
+  </g>
+  <g id="mp-Capa_25" data-name="Capa 25">
+    <path id="mp-_02-Mz35" data-name="02-Mz35" class="mpc-1" d="M341.72,376.09l.33,25.66c-9.09.1-18.18.21-27.27.31l-.17-25.66c9.03-.1,18.07-.21,27.1-.32Z"/>
+  </g>
+  <g id="mp-Capa_24" data-name="Capa 24">
+    <path id="mp-_01-Mz35" data-name="01-Mz35" class="mpc-1" d="M341.44,354.62l.28,21.47c-9.03.1-18.07.21-27.1.32l-.17-27.49,20.8-.27c3.38-.04,6.15,2.63,6.19,5.97Z"/>
+  </g>
+  <g id="mp-Capa_23" data-name="Capa 23">
+    <path id="mp-_10-Mz36" data-name="10-Mz36" class="mpc-1" d="M249.31,349.71l.17,27.49c-9.22.11-18.45.21-27.68.32l-.28-21.4c-.04-3.34,2.66-6.08,6.03-6.13l21.75-.28Z"/>
+  </g>
+  <g id="mp-Capa_22" data-name="Capa 22">
+    <path id="mp-_09-Mz36" data-name="09-Mz36" class="mpc-1" d="M249.48,377.2l.17,25.66c-9.17.11-18.34.21-27.51.31l-.33-25.65c9.23-.11,18.45-.21,27.68-.32Z"/>
+  </g>
+  <g id="mp-Capa_21" data-name="Capa 21">
+    <path id="mp-_08-Mz36" data-name="08-Mz36" class="mpc-1" d="M249.64,402.86l.16,25.66c-9.11.11-18.22.22-27.33.32l-.33-25.68c9.17-.1,18.34-.2,27.51-.31Z"/>
+  </g>
+  <g id="mp-Capa_20" data-name="Capa 20">
+    <path id="mp-_07-Mz36" data-name="07-Mz36" class="mpc-1" d="M249.8,428.53l.16,25.66c-9.05.11-18.1.21-27.16.32l-.33-25.66c9.11-.1,18.22-.21,27.33-.32Z"/>
+  </g>
+  <g id="mp-Capa_19" data-name="Capa 19">
+    <path id="mp-_06-Mz36" data-name="06-Mz36" class="mpc-1" d="M249.96,454.19l.17,27.93-20.85.27c-3.38.04-6.15-2.63-6.19-5.97l-.29-21.92c9.05-.1,18.11-.21,27.16-.32Z"/>
+  </g>
+  <g id="mp-Capa_18" data-name="Capa 18">
+    <path id="mp-_05-Mz36" data-name="05-Mz36" class="mpc-1" d="M277.58,453.87l.28,21.84c.04,3.34-2.66,6.08-6.03,6.13l-21.69.28-.17-27.93c9.21-.1,18.42-.21,27.62-.32Z"/>
+  </g>
+  <g id="mp-Capa_17" data-name="Capa 17">
+    <path id="mp-_04-Mz36" data-name="04-Mz36" class="mpc-1" d="M277.25,428.21l.33,25.66c-9.2.11-18.41.22-27.62.32l-.16-25.66c9.15-.1,18.3-.21,27.44-.32Z"/>
+  </g>
+  <g id="mp-Capa_16" data-name="Capa 16">
+    <path id="mp-_03-Mz36" data-name="03-Mz36" class="mpc-1" d="M276.91,402.55l.33,25.66c-9.15.11-18.29.22-27.44.32l-.16-25.66c9.09-.1,18.18-.21,27.27-.31Z"/>
+  </g>
+  <g id="mp-Capa_15" data-name="Capa 15">
+    <path id="mp-_02-Mz36" data-name="02-Mz36" class="mpc-1" d="M276.58,376.89l.33,25.66c-9.09.1-18.18.21-27.27.31l-.17-25.66c9.03-.1,18.07-.21,27.1-.32Z"/>
+  </g>
+  <g id="mp-Capa_14" data-name="Capa 14">
+    <path id="mp-_01-Mz36" data-name="01-Mz36" class="mpc-1" d="M276.3,355.41l.28,21.47c-9.03.1-18.07.21-27.1.32l-.17-27.49,20.8-.27c3.38-.04,6.15,2.63,6.19,5.97Z"/>
+  </g>
+  <g id="mp-Capa_13" data-name="Capa 13">
+    <path id="mp-_10-Mz37" data-name="10-Mz37" class="mpc-1" d="M185.66,350.54l.17,27.49c-9.22.11-18.45.21-27.68.32l-.28-21.4c-.04-3.34,2.66-6.08,6.03-6.13l21.75-.28Z"/>
+  </g>
+  <g id="mp-Capa_12" data-name="Capa 12">
+    <path id="mp-_09-Mz37" data-name="09-Mz37" class="mpc-1" d="M185.83,378.03l.17,25.66c-9.17.11-18.34.21-27.51.31l-.33-25.65c9.23-.11,18.45-.21,27.68-.32Z"/>
+  </g>
+  <g id="mp-Capa_11" data-name="Capa 11">
+    <path id="mp-_08-Mz37" data-name="08-Mz37" class="mpc-1" d="M185.99,403.69l.16,25.66c-9.11.11-18.22.22-27.33.32l-.33-25.68c9.17-.1,18.34-.2,27.51-.31Z"/>
+  </g>
+  <g id="mp-Capa_10" data-name="Capa 10">
+    <path id="mp-_07-Mz37" data-name="07-Mz37" class="mpc-1" d="M186.15,429.35l.16,25.66c-9.05.11-18.1.21-27.16.32l-.33-25.66c9.11-.1,18.22-.21,27.33-.32Z"/>
+  </g>
+  <g id="mp-Capa_9" data-name="Capa 9">
+    <path id="mp-_06-Mz37" data-name="06-Mz37" class="mpc-1" d="M186.31,455.02l.17,27.93-20.85.27c-3.38.04-6.15-2.63-6.19-5.97l-.29-21.92c9.05-.1,18.11-.21,27.16-.32Z"/>
+  </g>
+  <g id="mp-Capa_8" data-name="Capa 8">
+    <path id="mp-_05-Mz37" data-name="05-Mz37" class="mpc-1" d="M213.93,454.7l.28,21.84c.04,3.34-2.66,6.08-6.03,6.13l-21.69.28-.17-27.93c9.21-.1,18.42-.21,27.62-.32Z"/>
+  </g>
+  <g id="mp-Capa_7" data-name="Capa 7">
+    <path id="mp-_04-Mz37" data-name="04-Mz37" class="mpc-1" d="M213.6,429.04l.33,25.66c-9.2.11-18.41.22-27.62.32l-.16-25.66c9.15-.1,18.3-.21,27.44-.32Z"/>
+  </g>
+  <g id="mp-Capa_6" data-name="Capa 6">
+    <path id="mp-_03-Mz37" data-name="03-Mz37" class="mpc-1" d="M213.26,403.38l.33,25.66c-9.15.11-18.29.22-27.44.32l-.16-25.66c9.09-.1,18.18-.21,27.27-.31Z"/>
+  </g>
+  <g id="mp-Capa_5" data-name="Capa 5">
+    <path id="mp-_02-Mz37" data-name="02-Mz37" class="mpc-1" d="M212.93,377.71l.33,25.66c-9.09.1-18.18.21-27.27.31l-.17-25.66c9.03-.1,18.07-.21,27.1-.32Z"/>
+  </g>
+  <g id="mp-Capa_4" data-name="Capa 4">
+    <path id="mp-_01-Mz37" data-name="01-Mz37" class="mpc-1" d="M212.65,356.24l.28,21.47c-9.03.1-18.07.21-27.1.32l-.17-27.49,20.8-.27c3.38-.04,6.15,2.63,6.19,5.97Z"/>
+  </g>
+  <g id="mp-Capa_3" data-name="Capa 3">
+    <path id="mp-fuente" class="mpc-1" d="M128.32,334.54c-.22-.02-.45-.03-.68-.03-3.44.04-6.18,2.79-6.14,6.13.04,3.34,2.86,6.02,6.29,5.97.27,0,.54-.02.8-.06,3.05-.41,5.38-2.99,5.34-6.07s-2.5-5.65-5.62-5.93ZM128.82,344c-.33.1-.68.16-1.04.16-2.04.03-3.72-1.57-3.75-3.56-.03-1.99,1.61-3.62,3.66-3.65.34,0,.66.03.97.11,1.59.39,2.76,1.78,2.78,3.44s-1.08,3.04-2.62,3.5Z"/>
+  </g>
+  <g id="mp-Capa_2" data-name="Capa 2">
+    <path id="mp-fuente_centro" data-name="fuente centro" class="mpc-1" d="M131.43,340.51c.02,1.64-1.08,3.04-2.62,3.5-.33.1-.68.16-1.04.16-2.04.03-3.72-1.57-3.75-3.56-.03-1.99,1.61-3.62,3.66-3.65.34,0,.66.03.97.11,1.59.39,2.76,1.78,2.78,3.44Z"/>
+  </g>
+</svg>
+    <div class="nx-carga" id="nx-carga">
+      <svg class="nx-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 367.75 270.42" aria-label="Castamar" role="img">
+  
+  <g>
+    <path d="M259.48,139.1c-1.01,5.96-1.94,11.95-2.91,17.92-.1.57-.24,1.18-.51,1.62-2.31,3.85-4.64,7.66-6.97,11.47-.21-.11-.43-.22-.64-.33-.35-8.62-.69-17.24-1.08-25.86-.04-.84.09-1.44.42-1.87-.31.14-.61.27-.92.4-.67.28-1.33.31-1.97-.09-4.36-2.71-8.88-4.86-13.18-7.83-3.74-2.59-7.99-3.84-11.68-6.76-.29-.23-.63-.37-.93-.68-.76,0-1.06-1.03-1.45-1.91-4.1-9.29-8.19-18.58-12.3-27.87-5.97-13.51-11.92-27.04-17.97-40.51-.86-1.93-.8-3.17.41-4.84,5.71-7.87,11.3-15.86,16.92-23.82.96-1.36,2.02-2.27,3.63-2.67,5.06-1.27,10.08-2.75,15.07-4.34,1.74-.55,2.43-.11,3.11,1.88,7.86,23.13,15.81,46.21,23.74,69.3,1.72,4.99,3.39,9.99,5.18,14.93.52,1.45.38,2.47-.47,3.62-1.89,2.54-3.87,5.03-5.47,7.82-.68,1.18-1.45,2.05-2.32,2.68.57.46,1.12,1.08,1.68,1.88,3.23,4.61,6.81,8.79,10.73,13.78-.18.08-.35.15-.53.22.56.02.63.62.41,1.86Z"/>
+    <path d="M272.31,43.88c-3.22-11.44-6.44-22.89-9.63-34.35-.72-2.57-1.72-4.25-4.36-4.8-5.99-1.25-11.91-2.98-17.84-4.58-1.38-.37-2.25-.1-3.06,1.4-2.8,5.18-5.68,10.31-8.66,15.34-1.02,1.72-1.06,3.15-.37,5.07,2.75,7.61,5.36,15.29,8,22.95,7.09,20.6,14.17,41.2,21.22,61.82.41,1.2.97,1.77,2.05,2.07,4.12,1.16,8.23,2.42,12.33,3.7,1.72.53,2.6.45,2.88-2.18.94-9.02,2.22-17.99,3.35-26.99.54-4.25,1.03-8.5,1.58-13.02-.1-.34-.26-.92-.42-1.5-2.35-8.31-4.72-16.62-7.06-24.94Z"/>
+    <path d="M152.25,111.59c-11.78,9.53-23.5,19.17-35.23,28.78-.48.39-.89.86-1.27.88-.01,0-.01.01-.02.01-4.86,2.79-13.34,8.24-18.18,11.09-.7.41-1.28.39-1.88.15.37.49.34,1.08-.14,2.05-4.11,8.41-8.13,16.88-12.13,25.36-.6,1.26-.95,1.51-2.07.43-2.58-2.49-3.65-5.17-3.21-9.28.93-8.64,1.26-17.37,1.86-26.07.05-.7-.23-1.7.6-1.88h.01c7.9-8.73,18.91-19.7,27.06-28.55-.39-1.44-.76-2.88-1.12-4.32-1.63-6.6-2.44-13.46-3.62-20.21-.07-.4-.09-.81-.14-1.21-.41-2.95,1.66-2.81,3.09-3.22,7.59-2.17,15.4-2.9,23.09-4.43,4.16-.83,8.34-1.43,12.5-2.26,1.8-.37,2.83-.1,3.52,2.28,2.55,8.88,5.31,17.68,8.04,26.5.49,1.58.69,2.72-.76,3.9Z"/>
+    <path d="M182.86,56.7c-11.79,6.75-23.57,13.54-35.39,20.22-1.4.79-1.13,1.62-.74,2.88,2.91,9.4,5.79,18.82,8.65,28.24.3.99.56,1.88,1.4,2.51,8.26,6.25,16.5,12.54,25.28,19.22.62-24.85,1.22-49.02,1.82-73.37-.54.16-.8.18-1.01.3Z"/>
+    <path d="M213.99,125.4c-7.02-15.48-13.84-31.08-20.73-46.64-1.95-4.41-3.9-8.81-5.85-13.21-.15.08-.31.17-.46.25-.29,10.14-.6,20.29-.87,30.43-.29,10.9-.51,21.8-.82,32.69-.05,1.64.31,2.37,1.82,2.58,5.55.77,11.12,1.48,16.62,2.63,3.64.76,6.52.24,9.28-2.88,1.74-1.97,2.22-3.16,1-5.85Z"/>
+    <path d="M307.49,47.49c-10.77-2.22-21.53-4.5-32.28-6.8-1.4-.3-1.48.15-1.07,1.59,2.37,8.21,4.67,16.45,6.98,24.68.3,1.07.63,2.01,1.59,1.53,6.69-1.13,13.14-2.21,19.58-3.3.96-.16,1.52-.81,1.86-1.89,1.42-4.5,2.87-9,4.37-13.47.45-1.34.41-2.04-1.02-2.34Z"/>
+    <path d="M220.18,181.31c-.07-.35-.14-.7-.21-1.05-.03.01-.05.02-.08.04-3.64-5.67-7.21-11.4-10.95-16.98-1.47-2.18-.38-4.22-.19-6.23.61-6.64,1.47-13.25,2.23-19.88.17-.01.33-.01.5-.02.05-.89.44-1.54,1.3-2.09.53-.34.97-.86,1.43-1.33,3.92-3.96,3.9-3.93,8.34-.65,1,.73,1.47,1.48,1.52,2.9.36,10.08.81,20.16,1.21,30.24.3,7.33-.24,8.94-5.1,15.05Z"/>
+    <path d="M152.5,174.24c-3.66-4.78-6.93-9.09-10.23-13.36-.71-.92-.93-1.97-.94-3.26-.04-8.14-.11-16.3-.18-24.44-.87-1.78-1.74-3.55-2.62-5.32-.47-.95-.55-1.6.32-2.3,4.86-3.95,9.69-7.95,14.81-12.17.11,14.39.23,28.45.33,43.17.83,4.8-1.15,13.19-1.49,17.68Z"/>
+    <path d="M101.13,113.2c-6.98-.16-13.71-1.15-19.79,4.26-5.01,4.46-10.8,7.74-16.68,11.84,4.53.5,8.08-.54,11.57-2.47,7.11-3.95,14.33-7.61,21.49-11.45,1.13-.6,2.51-.76,3.41-2.18Z"/>
+    <path d="M271.11,31.1c-.27.88,1.76,6.61,2.52,6.78,5.33,1.13,10.67,2.2,16.51,3.4-2.07-3.94-3.88-7.34-5.65-10.77-.51-.99-1.22-1.04-2.05-.96-3.41.35-6.83.67-10.24,1.02-.4.04-.88-.13-1.09.54Z"/>
+    <path d="M102.63,110.51c.98.02,1.5-.24,1.27-1.57-.96-5.54-1.87-11.09-2.84-16.62-.08-.45-.39-1.04-.72-1.22-.7-.39-.87.48-1.08.96-2.51,5.93-5,11.88-7.7,18.34,4,.04,7.54.05,11.07.11Z"/>
+    <path d="M98.13,180.46c-1.25-4.21-4.03-7.02-6.71-9.93-.74-.81-1.13-.63-1.57.31-1.55,3.31-3.13,6.59-4.72,9.88-.53,1.1-.47,1.71.8,1.67,3.83-.11,7.65-.22,11.48-.23.82,0,.84-.44.83-1.1-.03-.2-.04-.41-.09-.6Z"/>
+    <path d="M234.03,177.41q-7.01-2.97-10.93,3.98c-.32.57-.99,1.1-.71,1.85.31.84,1.09.43,1.66.46,1.85.07,3.71.05,5.56.07.97,0,1.94.02,2.91.03.97,0,1.94.07,2.91.02.54-.03,1.29.36,1.47-.74.24-1.45-1.6-5.12-2.86-5.65Z"/>
+    <path d="M301.31,67.82c-4.49.85-9,1.59-13.49,2.38,0,.14,0,.28,0,.42,3.83,1.07,7.65,2.17,11.49,3.2,4.04,1.09,3.99,1.06,3.91-3.85-.03-1.64-.26-2.46-1.89-2.15Z"/>
+    <path d="M162.73,170.79c-1.17-.92-2.56-1.44-3.73-2.34-2.11-1.62-2.97-1.31-3.41,1.8-.77,5.38-.96,5.34,3.72,5.38.7,0,1.43.13,2.11-.01.84-.17,2.19.73,2.38-.92.15-1.36.1-3-1.06-3.91Z"/>
+    <path d="M276.14,27.55c.17-.04.33-.13.96-.38-3.58-4.4-6.95-8.53-10.31-12.66-.14.1-.27.19-.41.29.69,2.52,1.37,5.03,2.06,7.55,1.72,6.31,2.14,6.59,7.7,5.2Z"/>
+    <path d="M68.86,124.86c.27-.2.55-.65.14-.99-1.94-1.64-3.85-3.34-5.87-4.82-1.3-.95-2.52.32-4.22.62,1.78,2.76,3.32,5.14,4.85,7.53.28.44.52.86,1.05.5,1.36-.93,2.72-1.85,4.05-2.82Z"/>
+    <path d="M246.58,164.25c-.04-.48,0-.94-.59-1.15-1.43-.5-3.76,1.28-4.63,3.35-1.07,2.56,1.02,2.24,1.9,2.97.64.53,1.43.79,2.12,1.25,1.29.86,1.79.43,1.58-1.22-.12-1.73-.24-3.46-.38-5.19Z"/>
+  </g>
+  <g>
+    <path d="M50.23,251.93c0,11.02-7.51,17.4-21.91,17.4H0v-63.76h26.76c13.69,0,20.73,6.65,20.73,16.58,0,6.38-2.82,11.29-7.28,14.03,6.1,2.28,10.01,7.74,10.01,15.76ZM12.59,216.68v15.03h12.6c6.18,0,9.54-2.55,9.54-7.56s-3.37-7.47-9.54-7.47h-12.6ZM37.47,250.38c0-5.37-3.52-7.92-10.09-7.92h-14.79v15.76h14.79c6.57,0,10.09-2.37,10.09-7.84Z"/>
+    <path d="M92.14,255.67h-25.43l-4.85,13.66h-12.99l24.41-63.76h12.52l24.49,63.76h-13.3l-4.85-13.66ZM88.15,244.47l-8.68-24.41-8.68,24.41h17.37Z"/>
+    <path d="M159.72,228.71c0,14.21-9.15,23.04-23.79,23.04h-11.03v17.58h-12.68v-63.76h23.71c14.63,0,23.79,8.84,23.79,23.14ZM146.89,228.71c0-7.02-3.91-11.11-11.66-11.11h-10.32v22.13h10.32c7.75,0,11.66-4.1,11.66-11.02Z"/>
+    <path d="M207.34,257.49v11.84h-42.4v-63.76h41.39v11.84h-28.79v13.84h25.42v11.48h-25.42v14.75h29.81Z"/>
+    <path d="M248.56,269.33l-10.56-17.76h-11.66v17.76h-12.68v-63.76h23.71c14.63,0,23.79,8.84,23.79,23.14,0,9.56-4.15,16.58-11.27,20.13l12.28,20.49h-13.61ZM236.67,217.59h-10.32v22.23h10.32c7.75,0,11.66-4.19,11.66-11.11s-3.91-11.11-11.66-11.11Z"/>
+    <path d="M263.09,263.05l4.3-11.11c4.62,3.91,11.5,6.65,18.07,6.65,7.51,0,10.56-2.91,10.56-6.83,0-11.93-31.84-3.73-31.84-27.42,0-10.84,7.51-19.86,23.08-19.86,6.89,0,13.93,1.91,19.01,5.65l-3.91,11.2c-5.09-3.37-10.33-5.01-15.18-5.01-7.51,0-10.4,3.28-10.4,7.29,0,11.75,31.84,3.64,31.84,27.05,0,10.66-7.59,19.76-23.24,19.76-8.68,0-17.44-3-22.3-7.38Z"/>
+    <path d="M349.6,255.67h-25.42l-4.85,13.66h-12.99l24.41-63.76h12.52l24.49,63.76h-13.3l-4.85-13.66ZM345.61,244.47l-8.68-24.41-8.68,24.41h17.37Z"/>
+  </g>
+</svg>
+      <div class="nx-barra"><i></i></div>
+      <p>Cargando lotes…</p>
+    </div>
+    <div class="nx-hint" id="nx-hint">Pasa el cursor sobre un lote · clic para ver la información</div>
+    <div class="nx-zoom">
+      <button type="button" id="nx-in"  title="Acercar">+</button>
+      <button type="button" id="nx-out" title="Alejar">−</button>
+      <button type="button" id="nx-res" title="Restablecer">⟲</button>
+    </div>
+  </div>
+</div>
+
+<!-- tooltip -->
+<div class="nx-tip" id="nx-tip"></div>
+
+<!-- ventana de informacion -->
+<div class="nx-modal" id="nx-modal" role="dialog" aria-modal="true">
+  <div class="nx-veil" data-cerrar></div>
+  <div class="nx-card">
+    <div class="nx-card-top">
+      <button class="nx-close" type="button" data-cerrar aria-label="Cerrar">✕</button>
+      <h3 id="nx-m-title">Lote</h3>
+      <p id="nx-m-sub">Manzana</p>
+      <span class="nx-chip"><i id="nx-m-dot"></i><span id="nx-m-estado">Disponible</span></span>
+    </div>
+    <div class="nx-card-body">
+      <div class="nx-rows">
+        <div class="nx-cellv"><span>Precio</span><b id="nx-m-precio">$45.000</b></div>
+        <div class="nx-cellv"><span>Entrada</span><b id="nx-m-entrada">$15.000</b></div>
+        <div class="nx-cellv" id="nx-m-area-caja" hidden><span>Área</span><b id="nx-m-area">—</b></div>
+      </div>
+      <p class="nx-note" id="nx-m-note">Saldo financiado directo, sin intereses. Consulta el plan de pagos con un asesor.</p>
+
+      <a class="nx-btn nx-btn-asesor" id="nx-b-asesor" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2 22l5.25-1.38a9.9 9.9 0 004.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0012.04 2zm5.8 14.13c-.25.69-1.44 1.32-1.99 1.4-.51.08-1.15.11-1.86-.12-.43-.14-.98-.32-1.69-.62-2.97-1.28-4.91-4.27-5.06-4.47-.15-.2-1.21-1.61-1.21-3.07s.76-2.18 1.04-2.48c.27-.3.59-.37.79-.37h.57c.18 0 .43-.07.67.51.25.6.85 2.07.92 2.22.08.15.13.32.02.52-.1.2-.15.32-.3.5-.15.17-.32.39-.45.52-.15.15-.31.31-.13.61.17.3.77 1.27 1.65 2.06 1.14 1.01 2.1 1.33 2.4 1.48.3.15.47.12.65-.07.17-.2.75-.87.95-1.17.2-.3.4-.25.67-.15.27.1 1.72.81 2.02.96.3.15.5.22.57.35.07.12.07.71-.18 1.4z"/></svg>
+        Hablar con un asesor
+      </a>
+
+      <a class="nx-btn nx-btn-promo" id="nx-b-promo" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5z"/></svg>
+        Promoción por reserva inmediata
+      </a>
+
+      <p class="nx-legal">Te atendemos por WhatsApp · Respuesta inmediata</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ══════════════════════════════════════════════════════════════
+   1) CONFIGURACIÓN  —  edita solo este bloque
+   ══════════════════════════════════════════════════════════════ */
+const CONFIG = {
+  // Número de WhatsApp con código de país, SOLO dígitos (Ecuador = 593).
+  whatsapp: "593999999999",
+
+  // Nombre del proyecto. Si lo dejas vacío no aparece en ningún sitio.
+  // Si lo llenas, sale en la ventana del lote y en el mensaje de WhatsApp.
+  proyecto: "",
+
+  /* ── BOTÓN "RECORRIDO VIRTUAL" ──────────────────────────────────
+     Pega aquí el enlace de tu tour (Matterport, YouTube 360, etc.).
+     Mientras esté vacío el botón se ve, pero no lleva a ningún lado.  */
+  recorridoURL: "https://castamar.netlify.app/",
+  mostrarRecorrido: true,          // ponlo en false para ocultar el botón
+  textoRecorrido: "Recorrido virtual",
+
+  precioDesde: 45000,   // USD
+  entrada:     15000,   // USD
+
+  // Mensajes que se envían por WhatsApp. {LOTE} se reemplaza automáticamente.
+  msgAsesor: "Hola, quiero información del {LOTE}. ¿Está disponible?",
+  msgPromo:  "Hola, me interesa la PROMOCIÓN POR RESERVA INMEDIATA del {LOTE}. ¿Cómo la separo hoy?",
+
+  mostrarEtiquetas: true,  // números de lote dibujados sobre el plano
+  mostrarManzanas:  false, // rótulo "Mz 07" en el centro de cada manzana
+
+  // "auto" se adapta al color de tu web · "claro" · "oscuro"
+  tema: "auto",
+
+  /* ── PRECIOS Y ESTADOS DESDE TU HOJA DE CÁLCULO ─────────────────
+     Pega aquí el enlace CSV de tu hoja publicada (Archivo ▸ Compartir ▸
+     Publicar en la web ▸ CSV). Déjalo vacío ("") para no usar hoja.
+     También sirve un .csv subido a tu propio hosting.               */
+  datosURL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWgBIwE1H3YJ6v-d0NVbOUa3NrdPOVZPRrRup6-FvOekV33kFkRWnpaIpIJ6MXFUXgLPxORbhjHv7d/pub?gid=125050881&single=true&output=csv",
+
+  // cada cuántos minutos vuelve a leer la hoja (0 = solo al abrir la página)
+  refrescarCada: 0
+};
+
+/* ──────────────────────────────────────────────────────────────
+   ESTADOS DE LOS LOTES
+   ──────────────────────────────────────────────────────────────
+   Aquí decides qué lote está VENDIDO (rojo) o RESERVADO (ámbar).
+   Todo lote que NO aparezca en esta lista queda DISPONIBLE (verde).
+
+   Formato:   "LOTE-MzMANZANA": "vendido",
+   El nombre es el mismo que se ve sobre el plano, con dos dígitos.
+   Ejemplo: el lote que dice 03 / Mz 07  se escribe  "03-Mz07".
+
+   OJO: cada línea termina en coma, el valor va entre comillas y
+   solo acepta "vendido" o "reservado" (en minúsculas).
+
+   Para volver a poner un lote disponible, borra su línea
+   (o ponle // adelante para desactivarla).
+   ────────────────────────────────────────────────────────────── */
+const ESTADOS = {
+  // ↓ Borra el "//" del inicio y cambia los nombres por los tuyos:
+  // "03-Mz07": "vendido",
+  // "04-Mz07": "vendido",
+  // "01-Mz12": "reservado",
+};
+
+/* Precio distinto para un lote puntual (opcional). */
+const PRECIOS = {
+  // "05-Mz01": 52000,
+};
+
+/* Corrección de nombres mal escritos en el archivo original. */
+const ALIAS = {
+  /* Si algún lote viniera mal escrito en el plano, se corrige aquí:
+     "029-Mz10": "09-Mz10",                                          */
+};
+
+/* ══════════════════════════════════════════════════════════════
+   2) MOTOR  —  normalmente no hace falta tocar nada de aquí abajo
+   ══════════════════════════════════════════════════════════════ */
+const $  = (s, c) => (c || document).querySelector(s);
+const $$ = (s, c) => Array.from((c || document).querySelectorAll(s));
+
+const app    = $("#nx-app");
+const svg    = $("#nx-mapa");
+const stage  = $("#nx-stage");
+const tip    = $("#nx-tip");
+const modal  = $("#nx-modal");
+const money  = n => "$" + Number(n).toLocaleString("es-EC");
+const m2     = n => (Math.round(Number(n) * 10) / 10).toLocaleString("es-EC") + " m²";
+const ETIQ   = { disponible:"Disponible", reservado:"Reservado", vendido:"Vendido" };
+const COLOR  = { disponible:"#8ff0ad",    reservado:"#ffd27a",   vendido:"#ff9b9b"  };
+
+
+/* botón de recorrido virtual */
+(function(){
+  const t = $("#nx-tour");
+  if (CONFIG.mostrarRecorrido === false) return;
+  t.hidden = false;
+  if (CONFIG.textoRecorrido) t.lastChild.textContent = " " + CONFIG.textoRecorrido;
+  if (CONFIG.recorridoURL){
+    t.href = CONFIG.recorridoURL;
+  } else {                                   // aún sin enlace: se ve pero no navega
+    t.removeAttribute("href");
+    t.classList.add("nx-tour-off");
+    t.title = "Añade tu enlace en CONFIG.recorridoURL";
+  }
+})();
+
+/* tema automático: si la sección de tu web es oscura, el mapa se adapta */
+(function(){
+  const modo = (CONFIG.tema || "auto").toLowerCase();
+  let oscuro = modo === "oscuro";
+  if (modo === "auto"){
+    let n = app.parentElement, rgb = null;
+    while (n && !rgb){
+      const m = getComputedStyle(n).backgroundColor.match(/rgba?\(([^)]+)\)/);
+      if (m){
+        const v = m[1].split(",").map(parseFloat);
+        if (v.length < 4 || v[3] > 0.5) rgb = v;
+      }
+      n = n.parentElement;
+    }
+    if (rgb) oscuro = (0.2126*rgb[0] + 0.7152*rgb[1] + 0.0722*rgb[2]) < 130;
+  }
+  if (oscuro) [app, tip, modal].forEach(el => el.classList.add("nx-dark"));
+})();
+
+/* el globito y la ventana se cuelgan del <body>: así ningún contenedor de
+   tu web (con overflow, transform o z-index) los recorta ni los desplaza */
+if (tip.parentNode !== document.body)   document.body.appendChild(tip);
+if (modal.parentNode !== document.body) document.body.appendChild(modal);
+
+/* aviso de uso: cambia según sea táctil o con mouse, y se desvanece solo */
+const hint = $("#nx-hint");
+const tactil = matchMedia("(hover: none)").matches;
+if (tactil) hint.textContent = "Toca un lote para ver la información · pellizca para acercar";
+setTimeout(() => hint.classList.add("nx-off"), 6000);
+
+/* --- filtro de sombra dentro del SVG --- */
+const defs = svg.querySelector("defs") || svg.insertBefore(
+  document.createElementNS("http://www.w3.org/2000/svg","defs"), svg.firstChild);
+defs.insertAdjacentHTML("beforeend",
+  '<filter id="nx-shadow" x="-45%" y="-45%" width="190%" height="190%">' +
+  '<feDropShadow dx="0" dy="3" stdDeviation="4.5" flood-color="#062616" flood-opacity=".55"/>' +
+  '</filter>');
+
+/* --- detectar los lotes: id tipo _05-Mz01 --- */
+const RX = /^(?:mp-)?_?(\d{1,3})-Mz(\d{1,3})$/i;
+const lotes = [];
+
+$$("path[id], rect[id], polygon[id], circle[id], ellipse[id]", svg).forEach(p => {
+  const m = RX.exec(p.id);
+  if (!m) return;                       // áreas verdes, fuente, centro comercial…
+  let nombre = m[1] + "-Mz" + m[2];
+  if (ALIAS[nombre]) nombre = ALIAS[nombre];
+  const mm = /^(\d+)-Mz(\d+)$/.exec(nombre);
+  const num = mm[1].padStart(2, "0");
+  const mz  = mm[2].padStart(2, "0");
+  const id  = num + "-Mz" + mz;
+
+  const estado = ESTADOS[id] || "disponible";
+  p.classList.add("nx-lote");
+  p.dataset.id     = id;
+  p.dataset.lote   = num;
+  p.dataset.mz     = mz;
+  p.dataset.estado = estado;
+  p.setAttribute("tabindex", "0");
+  p.setAttribute("role", "button");
+  p.setAttribute("aria-label", "Lote " + num + " manzana " + mz + ", " + ETIQ[estado]);
+  lotes.push(p);
+});
+
+/* --- contador --- */
+function contar(){
+  const d = lotes.filter(p => p.dataset.estado === "disponible").length;
+  $("#nx-contador").innerHTML = "<b>" + d + "</b> de " + lotes.length + " lotes disponibles";
+}
+contar();
+
+/* --- pantalla de carga: se va cuando el plano está dibujado y los datos leídos --- */
+const carga = $("#nx-carga");
+let faltan = 2, desdeCuando = Date.now();
+function pasoListo(){
+  if (--faltan > 0) return;
+  const espera = Math.max(0, 600 - (Date.now() - desdeCuando));   // evita el parpadeo
+  setTimeout(() => {
+    carga.classList.add("nx-off");
+    setTimeout(() => { carga.hidden = true; }, 500);
+  }, espera);
+}
+setTimeout(() => { faltan = 1; pasoListo(); }, 8000);   // red de seguridad
+
+/* --- etiquetas con el número de cada lote --- */
+let gLabels = null;
+function dibujarEtiquetas(){
+  const gL = gLabels = document.createElementNS("http://www.w3.org/2000/svg","g");
+  gL.setAttribute("id","nx-labels");
+  gL.setAttribute("pointer-events","none");
+  svg.appendChild(gL);
+
+  const SVGNS = "http://www.w3.org/2000/svg";
+
+  /* ¿el punto cae DENTRO de la figura? (para lotes en L o con esquinas) */
+  function dentro(el, x, y){
+    try { return el.isPointInFill(new DOMPoint(x, y)); } catch(e){ return true; }
+  }
+
+  /* Mayor rectángulo que cabe DENTRO de la figura.
+     Sirve para que el texto nunca se salga de un área irregular.        */
+  function rectInterior(el, b, COLS, ROWS, nchar, nlin){
+    COLS = COLS || 34; ROWS = ROWS || 34;
+    // si se indica el texto, se busca el rectángulo donde la letra sale más
+    // grande (no el de mayor área): mejor para figuras alargadas
+    const puntua = (w, h) => (nchar
+        ? Math.min(w / (nchar * 0.62), h / ((nlin || 1) * 1.28))
+        : w * h);
+    const dx = b.width / COLS, dy = b.height / ROWS;
+    const g = [];
+    for (let r = 0; r < ROWS; r++){
+      const fila = [];
+      for (let c = 0; c < COLS; c++)
+        fila.push(dentro(el, b.x + (c + .5) * dx, b.y + (r + .5) * dy) ? 1 : 0);
+      g.push(fila);
+    }
+    const h = new Array(COLS).fill(0);
+    let mejor = null;
+    for (let r = 0; r < ROWS; r++){
+      for (let c = 0; c < COLS; c++) h[c] = g[r][c] ? h[c] + 1 : 0;
+      const pila = [];
+      for (let c = 0; c <= COLS; c++){
+        const act = (c === COLS) ? 0 : h[c];
+        while (pila.length && h[pila[pila.length - 1]] >= act){
+          const alto = h[pila.pop()];
+          const izq  = pila.length ? pila[pila.length - 1] + 1 : 0;
+          if (alto > 0){
+            const val = puntua((c - izq) * (b.width / COLS), alto * (b.height / ROWS));
+            if (!mejor || val > mejor.area)
+              mejor = { area:val, r0:r - alto + 1, c0:izq, r1:r, c1:c - 1 };
+          }
+        }
+        pila.push(c);
+      }
+    }
+    if (!mejor) return b;
+    return { x: b.x + mejor.c0 * dx,
+             y: b.y + mejor.r0 * dy,
+             width:  (mejor.c1 - mejor.c0 + 1) * dx,
+             height: (mejor.r1 - mejor.r0 + 1) * dy };
+  }
+
+  /* Dibuja un texto de varias líneas centrado en R y lo encoge hasta que
+     entra por completo dentro de R.                                      */
+  function etiqueta(clase, lineas, R, fsMax, subDesde){
+    const cx = R.x + R.width / 2, cy = R.y + R.height / 2;
+    const larga = Math.max.apply(null, lineas.map(w => String(w).length));
+    let fs = Math.min(fsMax, R.width / (larga * 0.62), R.height / (lineas.length * 1.28));
+
+    const t = document.createElementNS(SVGNS,"text");
+    t.setAttribute("class", clase);
+    gL.appendChild(t);
+
+    function pintar(){
+      while (t.firstChild) t.removeChild(t.firstChild);
+      const lh = fs * 1.05;
+      t.setAttribute("x", cx);
+      t.setAttribute("y", cy - (lineas.length - 1) * lh / 2);
+      t.setAttribute("font-size", fs.toFixed(2));
+      lineas.forEach((w, i) => {
+        const sp = document.createElementNS(SVGNS,"tspan");
+        sp.setAttribute("x", cx);
+        sp.setAttribute("dy", i === 0 ? "0" : lh.toFixed(2));
+        if (subDesde !== undefined && i >= subDesde){
+          sp.setAttribute("font-size", (fs * 0.66).toFixed(2));
+          sp.setAttribute("class","nx-label-sub");
+        }
+        sp.textContent = w;
+        t.appendChild(sp);
+      });
+    }
+
+    pintar();
+    // ajuste fino: si el texto se sale, se reduce (máx. 6 intentos)
+    for (let i = 0; i < 6; i++){
+      let tb; try { tb = t.getBBox(); } catch(e){ break; }
+      const kx = (R.width  * 0.94) / (tb.width  || 1);
+      const ky = (R.height * 0.94) / (tb.height || 1);
+      const k  = Math.min(kx, ky);
+      if (k >= 1) break;
+      fs = fs * Math.max(k, 0.55);
+      if (fs < 2) { t.remove(); return null; }
+      pintar();
+    }
+    return t;
+  }
+
+  const cajas = {};
+  lotes.forEach(p => {
+    let b; try { b = p.getBBox(); } catch(e){ return; }
+
+    // si el centro del lote no cae dentro de la figura (lotes en L, esquinas),
+    // se busca el mayor rectángulo interior
+    let R = b;
+    if (!dentro(p, b.x + b.width/2, b.y + b.height/2)) R = rectInterior(p, b, 16, 16);
+
+    /* TAMAÑO DEL TEXTO DE LOS LOTES: sube o baja el 8.4 para agrandar o
+       achicar el número del lote y su manzana.                            */
+    const fs = Math.min(8.4, R.height * 0.30, R.width * 0.32);
+    const dosLineas = fs >= 4.4;
+    etiqueta("nx-label",
+             dosLineas ? [p.dataset.lote, "Mz " + p.dataset.mz] : [p.dataset.lote],
+             R, 8.4, 1);
+
+    const k = p.dataset.mz;
+    const c = cajas[k] || (cajas[k] = {x1:1e9,y1:1e9,x2:-1e9,y2:-1e9});
+    c.x1 = Math.min(c.x1, b.x); c.y1 = Math.min(c.y1, b.y);
+    c.x2 = Math.max(c.x2, b.x + b.width); c.y2 = Math.max(c.y2, b.y + b.height);
+  });
+
+  // rótulos de las áreas comunes: una palabra por línea, siempre dentro
+  /* [ id , líneas del rótulo , tamaño máximo de letra ] */
+  [["mp-espacio_verde",           ["ÁREA","VERDE"],       9],
+   ["mp-espacio_verde-2",         ["ÁREA","VERDE"],       9],
+   ["mp-NUEVAS_AREAS_COMUNES",    ["ÁREA","COMÚN"],       9],
+   ["mp-NUEVAS_AREAS_COMUNES-2",  ["ÁREA","COMÚN"],       9],
+   ["mp-area_recreativa",         ["ÁREA","RECREATIVA"], 11]]
+  .forEach(par => {
+    const el = svg.querySelector('[id="' + par[0] + '"]'); if (!el) return;
+    let b; try { b = el.getBBox(); } catch(e){ return; }
+    const larga = Math.max.apply(null, par[1].map(w => w.length));
+    etiqueta("nx-label-area", par[1], rectInterior(el, b, 46, 46, larga, par[1].length), par[2]);
+  });
+
+  // rótulo "Mz 07" centrado en cada manzana
+  if (CONFIG.mostrarManzanas) Object.keys(cajas).forEach(k => {
+    const c = cajas[k];
+    const t = document.createElementNS("http://www.w3.org/2000/svg","text");
+    t.setAttribute("x", (c.x1 + c.x2)/2);
+    t.setAttribute("y", (c.y1 + c.y2)/2);
+    t.setAttribute("font-size", Math.max(9, Math.min(17, (c.x2-c.x1)*0.16)).toFixed(2));
+    t.setAttribute("class","nx-label-mz");
+    t.textContent = "Mz " + k;
+    gL.appendChild(t);
+  });
+}
+
+/* se dibuja en el siguiente cuadro para que la pantalla de carga
+   aparezca de inmediato y el navegador no se quede en blanco */
+requestAnimationFrame(() => requestAnimationFrame(() => {
+  if (CONFIG.mostrarEtiquetas) { try { dibujarEtiquetas(); } catch(e){ console.warn(e); } }
+  pasoListo();
+}));
+
+/* --- tooltip --- */
+let hot = null;
+function mostrarTip(p, ev){
+  const e = p.dataset.estado;
+  tip.innerHTML =
+    "<b>Lote " + p.dataset.lote + " · Mz " + p.dataset.mz + "</b>" +
+    '<span class="nx-badge"><i style="background:' + COLOR[e] + '"></i>' + ETIQ[e] + "</span>" +
+    (e === "disponible"
+      ? "<small>" + money(precioDe(p)) + (p.dataset.area ? " · " + m2(p.dataset.area) : "") +
+        " · Entrada " + money(entradaDe(p)) + " · Clic para más info</small>"
+      : "<small>Consulta otras opciones disponibles</small>");
+  tip.classList.add("nx-on");
+  moverTip(ev);
+}
+function moverTip(ev){
+  const m = 16, r = tip.getBoundingClientRect();
+  let x = ev.clientX + m, y = ev.clientY + m;
+  if (x + r.width  > innerWidth  - 8) x = ev.clientX - r.width  - m;
+  if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - m;
+  tip.style.left = Math.max(8, x) + "px";
+  tip.style.top  = Math.max(8, y) + "px";
+}
+function ocultarTip(){ tip.classList.remove("nx-on"); }
+
+svg.addEventListener("mouseover", e => {
+  const p = e.target.closest(".nx-lote"); if (!p || p === hot) return;
+  if (hot) hot.classList.remove("nx-hot");
+  hot = p; p.classList.add("nx-hot");
+  // lo trae al frente para que la sombra y el relieve se vean completos
+  const cont = p.parentNode;
+  if (cont && cont !== svg) svg.insertBefore(cont, gLabels);
+  mostrarTip(p, e);
+});
+svg.addEventListener("mousemove", e => { if (hot) moverTip(e); });
+svg.addEventListener("mouseleave", () => { if (hot) hot.classList.remove("nx-hot"); hot = null; ocultarTip(); });
+svg.addEventListener("mouseout", e => {
+  if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest(".nx-lote")){
+    if (hot){ hot.classList.remove("nx-hot"); hot = null; } ocultarTip();
+  }
+});
+
+/* --- abrir ventana de información --- */
+function precioDe(p){  return Number(p.dataset.precio)  || PRECIOS[p.dataset.id] || CONFIG.precioDesde; }
+function entradaDe(p){ return Number(p.dataset.entrada) || CONFIG.entrada; }
+let sel = null;
+
+function abrir(p){
+  if (sel) sel.classList.remove("nx-sel");
+  sel = p; p.classList.add("nx-sel");
+  ocultarTip();
+
+  const e = p.dataset.estado;
+  const nombre = "Lote " + p.dataset.lote + " – Mz " + p.dataset.mz;
+
+  $("#nx-m-title").textContent   = "Lote " + p.dataset.lote;
+  $("#nx-m-sub").textContent     = "Manzana " + p.dataset.mz + (CONFIG.proyecto ? " · " + CONFIG.proyecto : "");
+  $("#nx-m-estado").textContent  = ETIQ[e];
+  $("#nx-m-dot").style.background = COLOR[e];
+  const caja = $("#nx-m-area-caja");
+  if (p.dataset.area){ caja.hidden = false; $("#nx-m-area").textContent = m2(p.dataset.area); }
+  else caja.hidden = true;
+
+  $("#nx-m-precio").textContent  = e === "disponible" ? money(precioDe(p)) : "—";
+  $("#nx-m-entrada").textContent = e === "disponible" ? money(entradaDe(p)) : "—";
+  $("#nx-m-note").textContent    = e === "disponible"
+    ? "Saldo financiado directo, sin intereses. Consulta el plan de pagos con un asesor."
+    : "Este lote está " + ETIQ[e].toLowerCase() + ". Escríbenos y te mostramos lotes similares disponibles.";
+
+  const wa = (txt) => "https://wa.me/" + CONFIG.whatsapp + "?text=" +
+        encodeURIComponent(txt.replace("{LOTE}", nombre + (CONFIG.proyecto ? " del proyecto " + CONFIG.proyecto : "")));
+
+  const a1 = $("#nx-b-asesor"), a2 = $("#nx-b-promo");
+  a1.href = wa(CONFIG.msgAsesor);
+  a2.href = wa(CONFIG.msgPromo);
+  a2.classList.toggle("nx-btn-off", e !== "disponible");
+  a2.style.pointerEvents = e === "disponible" ? "" : "none";
+
+  modal.classList.add("nx-on");
+  scrollPrevio = document.body.style.overflow;
+  document.body.style.overflow = "hidden";
+}
+let scrollPrevio = "";
+function cerrar(){
+  modal.classList.remove("nx-on");
+  document.body.style.overflow = scrollPrevio;
+  if (sel){ sel.classList.remove("nx-sel"); sel = null; }
+}
+$$("[data-cerrar]").forEach(b => b.addEventListener("click", cerrar));
+document.addEventListener("keydown", e => { if (e.key === "Escape") cerrar(); });
+
+svg.addEventListener("click", e => {
+  const p = e.target.closest(".nx-lote");
+  if (p && !movido) abrir(p);
+});
+svg.addEventListener("keydown", e => {
+  const p = e.target.closest && e.target.closest(".nx-lote");
+  if (p && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); abrir(p); }
+});
+
+/* --- buscador tolerante ---------------------------------------------------
+   Entiende: "5", "05", "mz5", "mz 05", "manzana 5", "manzan 5", "mza 5",
+   "lote 3", "lt 3", "lote 3 manzana 5", "3-25", "03-Mz25", "3 de la mz 25"…
+   Los ceros a la izquierda son opcionales.                                  */
+const P2 = n => String(parseInt(n, 10)).padStart(2, "0");
+
+function interpretar(raw){
+  let s = " " + raw.toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")   // quita tildes
+      .replace(/[.,#°º_]/g, " ") + " ";
+
+  let mz = null, lt = null, mzLibre = false, ltLibre = false;
+
+  // manzana: manzana / manzan / manz / mzna / mza / mz / mn / m
+  const rMz = /(?:manzanas?|manzan|manz|mzna|mzn|mza|mz|mn|m)\s*-?\s*(\d{1,3})/;
+  let m = s.match(rMz);
+  if (m){ mz = m[1]; s = s.replace(m[0], " "); }
+
+  // lote: lote / lotes / lot / lte / lt / l
+  const rLt = /(?:lotes?|lot|lte|lt|l)\s*-?\s*(\d{1,3})/;
+  let l = s.match(rLt);
+  if (l){ lt = l[1]; s = s.replace(l[0], " "); }
+
+  // números sueltos que hayan quedado
+  const sueltos = s.match(/\d{1,3}/g) || [];
+  if (lt === null && sueltos.length){ lt = sueltos.shift(); ltLibre = true; }
+  if (mz === null && sueltos.length){ mz = sueltos.shift(); mzLibre = true; }
+
+  if (mz === null && lt === null) return null;
+
+  return function(p){
+    const okMz = mz === null || p.dataset.mz   === P2(mz);
+    const okLt = lt === null || p.dataset.lote === P2(lt);
+    // un número solo, sin palabra: puede ser el lote o la manzana
+    if (ltLibre && mz === null) return okLt || p.dataset.mz === P2(lt);
+    if (mzLibre && lt === null) return okMz || p.dataset.lote === P2(mz);
+    return okMz && okLt;
+  };
+}
+
+const inputQ = $("#nx-q");
+inputQ.addEventListener("input", function(){
+  const raw = this.value.trim();
+  if (!raw){
+    svg.classList.remove("nx-filtrando");
+    lotes.forEach(p => p.classList.remove("nx-match"));
+    contar();
+    return;
+  }
+  const test = interpretar(raw);
+  svg.classList.add("nx-filtrando");
+  let n = 0;
+  lotes.forEach(p => {
+    const ok = test ? test(p) : false;
+    p.classList.toggle("nx-match", ok);
+    if (ok) n++;
+  });
+  $("#nx-contador").innerHTML = n
+    ? "<b>" + n + "</b> " + (n === 1 ? "lote encontrado" : "lotes encontrados")
+    : "Sin resultados para “" + raw + "”";
+});
+
+/* ══════════════════════════════════════════════════════════════
+   PRECIOS Y ESTADOS EN VIVO DESDE LA HOJA DE CÁLCULO
+   ──────────────────────────────────────────────────────────────
+   Lee el CSV publicado y pinta el mapa. Columnas que reconoce
+   (el orden da igual y no distingue mayúsculas ni tildes):
+     ID · Manzana · Lote · Estado · Área (m²) · Precio (USD) · Entrada (USD)
+   Si falta la columna ID, empareja con Manzana + Lote.
+   ══════════════════════════════════════════════════════════════ */
+const porId = new Map(lotes.map(p => [p.dataset.id, p]));
+const sync  = $("#nx-sync");
+
+const sinTildes = t => String(t == null ? "" : t)
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+/* acepta el enlace CSV publicado, el enlace normal de la hoja o un .csv propio */
+function urlDatos(u){
+  u = String(u || "").trim();
+  if (!u || u.indexOf("PEGA_AQUI") === 0) return "";
+  if (u.indexOf("/d/e/") > -1){                       // hoja publicada
+    if (u.indexOf("output=csv") === -1)
+      u = u.replace(/\/pubhtml.*$/, "/pub") + (u.indexOf("?") > -1 ? "&" : "?") + "output=csv";
+    return u;
+  }
+  const m = u.match(/\/spreadsheets\/d\/([\w-]+)/);    // enlace normal de edición
+  if (m){
+    const gid = (u.match(/[#&?]gid=(\d+)/) || [, "0"])[1];
+    return "https://docs.google.com/spreadsheets/d/" + m[1] + "/export?format=csv&gid=" + gid;
+  }
+  return u;                                           // .csv en tu hosting
+}
+
+/* lector de CSV: respeta comillas, saltos de línea dentro de celdas y ; o , */
+function leerCSV(txt){
+  txt = txt.replace(/^﻿/, "");
+  const cab = txt.slice(0, txt.indexOf("\n") + 1 || txt.length);
+  const sep = (cab.split(";").length > cab.split(",").length) ? ";" : ",";
+  const filas = []; let fila = [], celda = "", comillas = false;
+  for (let i = 0; i < txt.length; i++){
+    const ch = txt[i];
+    if (comillas){
+      if (ch === '"'){ if (txt[i+1] === '"'){ celda += '"'; i++; } else comillas = false; }
+      else celda += ch;
+    } else if (ch === '"') comillas = true;
+    else if (ch === sep){ fila.push(celda); celda = ""; }
+    else if (ch === "\n"){ fila.push(celda); filas.push(fila); fila = []; celda = ""; }
+    else if (ch !== "\r") celda += ch;
+  }
+  if (celda !== "" || fila.length){ fila.push(celda); filas.push(fila); }
+  return filas.filter(f => f.some(c => String(c).trim() !== ""));
+}
+
+/* convierte "45.000", "45,000.00", "$ 45000", "240,5 m2"… en número */
+function aNumero(v){
+  let t = String(v == null ? "" : v).replace(/[^\d.,-]/g, "");
+  if (!t) return NaN;
+  const c = t.lastIndexOf(","), d = t.lastIndexOf(".");
+  if (c > -1 && d > -1)      t = (c > d) ? t.replace(/\./g, "").replace(",", ".") : t.replace(/,/g, "");
+  else if (c > -1)           t = (t.length - c - 1) <= 2 ? t.replace(",", ".") : t.replace(/,/g, "");
+  else if (d > -1 && (t.length - d - 1) > 2) t = t.replace(/\./g, "");
+  return parseFloat(t);
+}
+
+const ESTADO_ALIAS = {
+  disponible:"disponible", libre:"disponible", venta:"disponible", "en venta":"disponible",
+  reservado:"reservado", reserva:"reservado", separado:"reservado", apartado:"reservado",
+  vendido:"vendido", vendida:"vendido", ocupado:"vendido", "no disponible":"vendido"
+};
+
+function aplicarCSV(txt){
+  const filas = leerCSV(txt);
+  if (filas.length < 2) throw new Error("hoja vacía");
+
+  const cab = filas[0].map(sinTildes);
+  const col = (...claves) => {            // busca por palabra clave, en orden
+    for (const k of claves)
+      for (let i = 0; i < cab.length; i++) if (cab[i].indexOf(k) > -1) return i;
+    return -1;
+  };
+  const iId  = col("id"),       iMz  = col("manzana", "mz"),
+        iLt  = col("lote"),     iEst = col("estado"),
+        iAr  = col("area", "m2", "m²"),
+        iPr  = col("precio", "valor", "usd"),
+        iEn  = col("entrada", "inicial", "cuota");
+
+  let tocados = 0;
+  for (let f = 1; f < filas.length; f++){
+    const r = filas[f];
+    let lote = null, mz = null;
+
+    if (iId > -1 && r[iId]){                          // "03-Mz25", "3-25", "Mz25-03"…
+      const n = String(r[iId]).match(/\d{1,3}/g);
+      if (n && n.length >= 2){
+        if (/mz\s*\d+\s*[-_ ]/i.test(r[iId])) { mz = n[0]; lote = n[1]; }
+        else { lote = n[0]; mz = n[1]; }
+      }
+    }
+    if ((lote === null || mz === null) && iMz > -1 && iLt > -1){
+      const a = String(r[iMz]).match(/\d{1,3}/), b = String(r[iLt]).match(/\d{1,3}/);
+      if (a && b){ mz = a[0]; lote = b[0]; }
+    }
+    if (lote === null || mz === null) continue;
+
+    const p = porId.get(P2(lote) + "-Mz" + P2(mz));
+    if (!p) continue;
+    tocados++;
+
+    if (iEst > -1){
+      const e = ESTADO_ALIAS[sinTildes(r[iEst])];
+      if (e){
+        p.dataset.estado = e;
+        p.setAttribute("aria-label", "Lote " + p.dataset.lote + " manzana " + p.dataset.mz + ", " + ETIQ[e]);
+      }
+    }
+    if (iPr > -1){ const v = aNumero(r[iPr]); if (isFinite(v) && v > 0) p.dataset.precio = v; }
+    if (iAr > -1){ const v = aNumero(r[iAr]); if (isFinite(v) && v > 0) p.dataset.area = v; }
+    if (iEn > -1){ const v = aNumero(r[iEn]); if (isFinite(v) && v > 0) p.dataset.entrada = v; }
+  }
+  if (!tocados) throw new Error("ningún lote coincidió");
+
+  // el encabezado muestra el precio más bajo realmente disponible
+  const libres = lotes.filter(p => p.dataset.estado === "disponible");
+  if (libres.length){
+    $("#nx-desde").textContent   = money(Math.min.apply(null, libres.map(precioDe)));
+    $("#nx-entrada").textContent = money(Math.min.apply(null, libres.map(entradaDe)));
+  }
+
+  contar();
+  if (sel && modal.classList.contains("nx-on")) abrir(sel);
+  return tocados;
+}
+
+let avisadoDatos = false;
+const datosListos = () => { if (!avisadoDatos){ avisadoDatos = true; pasoListo(); } };
+
+function cargarDatos(silencioso){
+  const url = urlDatos(CONFIG.datosURL);
+  if (!url){ datosListos(); return; }
+  if (!silencioso){ sync.classList.remove("nx-err"); sync.textContent = "Actualizando…"; }
+  fetch(url + (url.indexOf("?") > -1 ? "&" : "?") + "_=" + Date.now(), { cache: "no-store" })
+    .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.text(); })
+    .then(txt => {
+      const n = aplicarCSV(txt);
+      const h = new Date();
+      sync.classList.remove("nx-err");
+      sync.textContent = "Actualizado " +
+        String(h.getHours()).padStart(2,"0") + ":" + String(h.getMinutes()).padStart(2,"0") +
+        " · " + n + " lotes";
+      datosListos();
+    })
+    .catch(err => {
+      sync.classList.add("nx-err");
+      sync.textContent = "No se pudo leer la hoja";
+      console.warn("[mapa de lotes] error leyendo la hoja:", err);
+      datosListos();
+    });
+}
+
+cargarDatos();
+if (CONFIG.refrescarCada > 0) setInterval(() => cargarDatos(true), CONFIG.refrescarCada * 60000);
+
+/* --- zoom y desplazamiento --- */
+let z = 1, tx = 0, ty = 0, movido = false;
+const aplicar = () => {
+  svg.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + z + ")";
+  // el arrastre solo tiene sentido cuando el plano está ampliado
+  stage.classList.toggle("nx-pan", z > 1.01);
+};
+function limitar(){
+  const w = stage.clientWidth, h = stage.clientHeight;
+  const maxX = (z - 1) * w, maxY = (z - 1) * h;
+  tx = Math.min(0, Math.max(-maxX, tx));
+  ty = Math.min(0, Math.max(-maxY, ty));
+}
+function zoomEn(f, cx, cy){
+  const n = Math.min(6, Math.max(1, z * f));
+  const r = stage.getBoundingClientRect();
+  const px = (cx === undefined ? r.width/2  : cx - r.left);
+  const py = (cy === undefined ? r.height/2 : cy - r.top);
+  tx = px - (px - tx) * (n / z);
+  ty = py - (py - ty) * (n / z);
+  z = n; limitar(); aplicar();
+}
+// en pantallas pequeñas arranca con un poco de zoom para que se lean los números
+if (innerWidth < 760) { z = 1; zoomEn(1.7); }
+
+$("#nx-in").onclick  = () => zoomEn(1.35);
+$("#nx-out").onclick = () => zoomEn(1/1.35);
+$("#nx-res").onclick = () => { z = 1; tx = ty = 0; aplicar(); if (innerWidth < 760) zoomEn(1.7); };
+
+stage.addEventListener("wheel", e => {
+  e.preventDefault();
+  zoomEn(e.deltaY < 0 ? 1.12 : 1/1.12, e.clientX, e.clientY);
+}, { passive:false });
+
+let arrastrando = false, x0 = 0, y0 = 0;
+stage.addEventListener("pointerdown", e => {
+  if (z <= 1.01) return;                       // sin zoom no se arrastra
+  if (e.pointerType === "mouse" && e.button !== 0) return;
+  arrastrando = true; movido = false;
+  x0 = e.clientX - tx; y0 = e.clientY - ty;
+  stage.classList.add("nx-drag");
+});
+window.addEventListener("pointermove", e => {
+  if (!arrastrando) return;
+  const nx2 = e.clientX - x0, ny2 = e.clientY - y0;
+  if (Math.abs(nx2 - tx) > 3 || Math.abs(ny2 - ty) > 3) movido = true;
+  if (!movido) return;
+  tx = nx2; ty = ny2; limitar(); aplicar();
+});
+["pointerup","pointercancel"].forEach(ev => window.addEventListener(ev, () => {
+  if (!arrastrando) return;
+  arrastrando = false; stage.classList.remove("nx-drag");
+  setTimeout(() => { movido = false; }, 40);
+}));
+
+// pellizco en móvil
+let d0 = null;
+stage.addEventListener("touchmove", e => {
+  if (e.touches.length !== 2) return;
+  e.preventDefault();
+  const [a,b] = e.touches;
+  const d = Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+  if (d0) zoomEn(d/d0, (a.clientX+b.clientX)/2, (a.clientY+b.clientY)/2);
+  d0 = d;
+}, { passive:false });
+stage.addEventListener("touchend", () => { d0 = null; });
+
+})();
+</script>

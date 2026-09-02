@@ -11,7 +11,7 @@ const SCENES = {
   principal: {
     label: 'Vista Principal',
     image: 'img/vista-principal.jpg', // panorámica 360° real (equirectangular) - frontal.png
-    audio: ''
+    audio: 'audio/narracion.mp3'
   }
 };
 const CENTRO_IMAGE = 'img/centro.jpg';
@@ -519,7 +519,7 @@ function applyLotColors(){
 loadLotsFromSheet();
 
 // ← reemplaza con tu número real de WhatsApp (código de país sin el "+", sin espacios)
-const WHATSAPP_NUMBER = '593999999999';
+const WHATSAPP_NUMBER = '593961025432';
 (function setupGlobalCta(){
   const cta = document.getElementById('globalCta');
   const msg = encodeURIComponent('Hola, quiero más información sobre el proyecto.');
@@ -1122,7 +1122,9 @@ let userEnabledAudio = false;
 function loadNarration(src){
   narrationAudio.pause(); narrationAudio.currentTime = 0; setPlayIcon(false);
   narrationAudio.src = src || '';
-  if(userEnabledAudio && narrationAudio.src) narrationAudio.play().catch(()=>{});
+  if(userEnabledAudio && narrationAudio.src){
+    narrationAudio.play().then(()=> setPlayIcon(true)).catch(()=>{});
+  }
 }
 function setPlayIcon(playing){
   document.getElementById('playIcon').style.display = playing ? 'none' : 'block';
